@@ -274,7 +274,7 @@ function Count-TempProfiles {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
     ForEach ($single_computer in $ComputerName) {
@@ -436,7 +436,7 @@ function Get-AssetInformation {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
 
@@ -614,7 +614,7 @@ function Get-ComputerDetails {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
     ## Save results to variable
@@ -774,7 +774,7 @@ function Get-ConnectedPrinters {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
     ## Scriptblock - lists connected/default printers
@@ -932,7 +932,7 @@ function Get-CurrentUser {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -1074,7 +1074,7 @@ function Get-InstalledDotNetversions {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -1222,7 +1222,7 @@ Function Get-IntuneHardwareIDs {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
     ## make sure there's a .csv on the end of output file?
@@ -1358,7 +1358,7 @@ function Get-InventoryDetails {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -scriptblock {
@@ -1524,7 +1524,7 @@ function Ping-TestReport {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
 
@@ -1712,7 +1712,7 @@ function Scan-ForAppOrFilePath {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
         
     if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
@@ -1934,7 +1934,7 @@ function Scan-SoftwareInventory {
         else {
             $REPORT_DIRECTORY = $outputfile            
         }
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $(Get-Location -Path .) -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
         
     $results = invoke-command -computername $ComputerName -scriptblock {
