@@ -245,15 +245,15 @@ function Get-AssetInformation {
         )]
         $ComputerName,
         [string]$Outputfile,
-        $SendPings
+        [switch]$SendPings
     )
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    }
+    } 
    
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "AssetInfo"
@@ -423,15 +423,15 @@ function Get-ComputerDetails {
         )]
         $ComputerName,
         [string]$Outputfile,
-        $SendPings
+        [switch]$SendPings
     )
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    }
+    } 
 
 
     $str_title_var = "PCdetails"
@@ -584,13 +584,13 @@ function Get-ConnectedPrinters {
         )]
         $ComputerName,
         [string]$Outputfile,
-        $SendPings
+        [switch]$SendPings
     )
     $ComputerName = GetTargets -TargetComputer $ComputerName
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    }
+    } 
      
         
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
@@ -741,15 +741,15 @@ function Get-CurrentUser {
         )]
         $ComputerName,
         [string]$Outputfile,
-        $SendPings
+        [switch]$SendPings
     )
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    }
+    } 
 
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "CurrentUsers"
@@ -883,13 +883,13 @@ function Get-InstalledDotNetversions {
         )]
         $ComputerName,
         [string]$Outputfile,
-        $SendPings
+        [switch]$SendPings
     )
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }    
 
@@ -1032,13 +1032,13 @@ Function Get-IntuneHardwareIDs {
         $ComputerName,
         [string]$Outputfile,
         [string]$DeviceGroupTag,
-        $SendPings
+        [switch]$SendPings
     )
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }    
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
@@ -1164,14 +1164,14 @@ function Get-InventoryDetails {
         )]
         $ComputerName,
         [string]$Outputfile,
-        $SendPings
+        [switch]$SendPings
     )
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
     ## Ping Test for Connectivity:
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     } 
     ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
@@ -1514,7 +1514,7 @@ function Scan-ForAppOrFilePath {
         [Parameter(Mandatory = $true)]
         [String]$Item,
         [String]$Outputfile,
-        $SendPings
+        [switch]$SendPings
     )
     ## 1. Set date
     ## 2. Handle targetcomputer if not submitted through pipeline
@@ -1525,9 +1525,9 @@ function Scan-ForAppOrFilePath {
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    }
+    } 
         
 
     ## 3. Outputfile handling - either create default, create filenames using input - report files are mandatory 
@@ -1734,7 +1734,7 @@ function Scan-SoftwareInventory {
             Mandatory = $true)]
         [string]$OutputFile,
         $AppsToLookFor,
-        $SendPings
+        [switch]$SendPings
     )
     ## 1. Define title, date variables
     ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
@@ -1749,7 +1749,7 @@ function Scan-SoftwareInventory {
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
     ## Ping Test for Connectivity:
-    if ($SendPings -eq 'y') {
+    if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }        
     ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
