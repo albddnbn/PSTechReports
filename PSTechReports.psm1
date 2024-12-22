@@ -257,16 +257,13 @@ function Get-AssetInformation {
    
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "AssetInfo"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
@@ -332,7 +329,7 @@ function Get-AssetInformation {
     if ($results) {
         ## Sort the results
         $results = $results | sort -property pscomputername
-        if ($outputfile.tolower() -eq 'n') {
+        if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title $str_title_var
         }
         else {
@@ -435,16 +432,12 @@ function Get-ComputerDetails {
 
 
     $str_title_var = "PCdetails"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
@@ -478,7 +471,7 @@ function Get-ComputerDetails {
     if ($results) {
         ## Sort the results
         $results = $results | sort -property pscomputername
-        if ($outputfile.tolower() -eq 'n') {
+        if (($outputfile.tolower() -eq 'n') -or ($null -eq $outputfile)) {
             # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
             if ($results.count -le 2) {
                 $results | Format-List
@@ -595,16 +588,12 @@ function Get-ConnectedPrinters {
         
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "Printers"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
@@ -641,7 +630,7 @@ function Get-ConnectedPrinters {
         ## 1. Sort any existing results by computername
         $results = $results | sort -property pscomputername
         ## 2. Output to gridview if user didn't choose report output.
-        if ($outputfile.tolower() -eq 'n') {
+        if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title $str_title_var
         }
         else {
@@ -753,16 +742,12 @@ function Get-CurrentUser {
 
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "CurrentUsers"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
@@ -783,7 +768,7 @@ function Get-CurrentUser {
         ## 1. Sort any existing results by computername
         $results = $results | sort -property pscomputername
         ## 2. Output to gridview if user didn't choose report output.
-        if ($outputfile.tolower() -eq 'n') {
+        if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -title $str_title_var
         }
         else {
@@ -895,16 +880,12 @@ function Get-InstalledDotNetversions {
 
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "InstalledDotNet"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
@@ -926,7 +907,7 @@ function Get-InstalledDotNetversions {
         ## 1. Sort any existing results by computername
         $results = $results | sort -property pscomputername
         ## 2. Output to gridview if user didn't choose report output.
-        if ($outputfile.tolower() -eq 'n') {
+        if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title "Installed .NET Versions"
         }
         else {
@@ -1043,16 +1024,12 @@ Function Get-IntuneHardwareIDs {
     }    
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "IntuneHardwareIDs"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
@@ -1179,16 +1156,12 @@ function Get-InventoryDetails {
     ### *** INSERT THE TITLE OF YOUR FUNCTION / REPORT FOR $str_title_var ***
     ###
     $str_title_var = "Inventory"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
@@ -1239,7 +1212,7 @@ function Get-InventoryDetails {
         ## 1. Sort any existing results by computername
         $results = $results | sort -property pscomputername
         ## 2. Output to gridview if user didn't choose report output.
-        if ($outputfile.tolower() -eq 'n') {
+        if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -title $str_title_var
         }
         else {
@@ -1345,16 +1318,12 @@ function Ping-TestReport {
     ## 2. If provided, use outputfile input to create report output filepath.
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "Pings-$Outputfile-$(Get-Date -Format 'hh-MM')$($am_pm)"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
 
@@ -1418,7 +1387,7 @@ function Ping-TestReport {
         ## 1. Sort any existing results by computername
         $results = $results | sort -property pscomputername
         ## 2. Output to gridview if user didn't choose report output.
-        if ($outputfile.tolower() -eq 'n') {
+        if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview
         }
         else {
@@ -1533,16 +1502,12 @@ function Scan-ForAppOrFilePath {
     ## 3. Outputfile handling - either create default, create filenames using input - report files are mandatory 
     ##    in this function.
     $str_title_var = "$SearchType-scan"
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
         
@@ -1755,16 +1720,12 @@ function Scan-SoftwareInventory {
     ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "SoftwareScan"
 
-    if ($Outputfile.tolower() -eq 'n') {
+    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        if ($Outputfile.toLower() -eq '') {
-            $REPORT_DIRECTORY = "$str_title_var"
-        }
-        else {
-            $REPORT_DIRECTORY = $outputfile            
-        }
+        $REPORT_DIRECTORY = $outputfile            
+
         $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
     }
         
