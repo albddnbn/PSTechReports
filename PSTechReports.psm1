@@ -71,72 +71,41 @@ Function GetTargets {
     return $TargetComputer
 }
 
-
-function GetOutputFileString {
-    <#
-        .SYNOPSIS
-            Takes input values for part of the filename, the root directory, subfolder title, and whether it should 
-            be in the reports or executables directory, and returns an acceptable filepath.
-
-        .DESCRIPTION
-            Uses input to return a filepath that doesn't already exist in specified directory.
-
-        .PARAMETER TitleString
-            Main part of filename.
-
-        .PARAMETER Rootdirectory
-            Root directory where the output folder will be created.
-
-        .PARAMETER FolderTitle
-            Title for subfolder that will directly contain file.
-
-        .PARAMETER ReportOutput
-            Filepath returned will be in format: RootDirectory/REPORTS/date/FolderTitle/TitleString-Date.csv
-
-        .PARAMETER ExecutableOutput
-            Filepath returned will be in format: RootDirectory/EXECUTABLES/date/FolderTitle/TitleString-Date.ps1
-
-        .EXAMPLE
-            GetOutputFileString -TitleString "A220" -Rootdirectory "C:\Users\albddnbn\Documents" -FolderTitle "AssetInfo"
-    #>
+function getoutputstring {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$TitleString,
-        [Parameter(Mandatory = $true)]
-        [string]$Rootdirectory,
-        [string]$FolderTitle,
-        [switch]$ReportOutput,
-        [switch]$ExecutableOutput
+        [string]$RootDirectory,
+        [string]$TitleString
     )
+
     ForEach ($file_ext in @('.csv', '.xlsx', '.ps1', '.exe')) {
-        Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Checking for file extension: $file_ext."
         $TitleString = $TitleString -replace $file_ext, ''
-        Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Removed file extension, TitleString is now: $TitleString."
     }
 
     $thedate = Get-Date -Format 'yyyy-MM-dd'
 
-    Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Subfolder determined to be: $subfolder."
+    $full_path = "$RootDirectory\$thedate\$TitleString"
 
-    $outputfolder = "$Rootdirectory\$thedate\$FolderTitle"
-
-    if (-not (Test-Path $outputfolder)) {
-        Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Couldn't find folder at: $outputfolder, creating it now."
-        New-Item $outputfolder -itemtype 'directory' -force | Out-null
-    }
-    $filename = "$TitleString-$thedate"
-    $full_output_path = "$outputfolder\$filename"
-    # make sure outputfiles dont exist
-
-    $x = 0
-    while (Get-ChildItem -Path $outputfolder -File | ? { $_.BaseName -eq $filename }) {
-        $full_output_path = "$outputfolder\$filename-$x"
-        $x++
+    if (-not (Test-Path $RootDirectory\$thedate)) {
+        New-Item -Path "$RootDirectory\$thedate" -itemtype 'directory'
     }
 
-    Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Full output path determined to be: $full_output_path."
+    $append = 0
 
-    return $full_output_path
+    while ($true) {
+        if ((Test-Path "$full_path.csv" -erroraction silentlycontinue) -or (Test-Path "$full_path.xlsx" -erroraction silentlycontinue)) {
+            Write-Host "Tested path - $full_path - creating new" -foregroundcolor yellow
+
+            $TitleString = "$TitleString-$append"
+            $full_path = "$RootDirectory\$thedate\$TitleString"
+            $append++
+        }
+        else {
+            break
+        }
+    }
+
+    return $full_path
+
 }
 
 function TestConnectivity {
@@ -247,7 +216,8 @@ function Get-AssetInformation {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
 
@@ -415,7 +385,8 @@ function Get-ComputerDetails {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -552,7 +523,8 @@ function Get-ConnectedPrinters {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
     ## Scriptblock - lists connected/default printers
@@ -699,7 +671,8 @@ function Get-CurrentUser {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -835,7 +808,8 @@ function Get-InstalledDotNetversions {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -977,7 +951,8 @@ Function Get-IntuneHardwareIDs {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
     ## make sure there's a .csv on the end of output file?
@@ -1107,7 +1082,8 @@ function Get-InventoryDetails {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -scriptblock {
@@ -1260,7 +1236,8 @@ function Ping-TestReport {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
     ## Create arraylist to store results
@@ -1427,7 +1404,8 @@ function Scan-ForAppOrFilePath {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
         
     if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
@@ -1630,13 +1608,12 @@ function Scan-SoftwareInventory {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }        
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-    $str_title_var = "SoftwareScan"
-
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
         
     $results = invoke-command -computername $ComputerName -scriptblock {
