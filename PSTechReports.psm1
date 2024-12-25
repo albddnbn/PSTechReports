@@ -4,10 +4,11 @@ Function GetTargets {
         Queries Active Directory for computer names based on hostname, hostname substring, or comma-separated list of hostnames.
 
     .DESCRIPTION
-        Long description
+        Instead of using ActiveDirectory module, this function uses an LDAP Query to search for hostnames matching input.
 
     .PARAMETER TargetComputer
-        Parameter description
+        Can be a single hostname, path to text file, comma-separated list of hostnames, or hostname substring which will 'grab' all hostnames starting with supplied substring.
+        Ex: 't-client-' will grab all hostnames starting with 't-client-' (t-client-01, t-client-02, t-client-03, etc.)
 
     .EXAMPLE
         GetTargets -TargetComputer "t-client-01"
@@ -19,7 +20,7 @@ Function GetTargets {
         GetTargets -TargetComputer "t-client-"
 
     .NOTES
-        General notes
+        Notes.
     #>
     param(
         [String[]]$TargetComputer
@@ -33,8 +34,6 @@ Function GetTargets {
     }
 
     else {
-        ## Prepare TargetComputer for LDAP query in ForEach loop
-        ## if TargetComputer contains commas - it's either multiple comma separated hostnames, or multiple comma separated hostname substrings - either way LDAP query will verify
         if ($Targetcomputer -like "*,*") {
             $TargetComputer = $TargetComputer -split ','
         }
@@ -42,7 +41,6 @@ Function GetTargets {
             $Targetcomputer = @($Targetcomputer)
         }
 
-        ## LDAP query each TargetComputer item, create new list / sets back to Targetcomputer when done.
         $NewTargetComputer = [System.Collections.Arraylist]::new()
         foreach ($computer in $TargetComputer) {
             ## CREDITS FOR The code this was adapted from: https://intunedrivemapping.azurewebsites.net/DriveMapping
@@ -66,13 +64,10 @@ Function GetTargets {
         $TargetComputer = $NewTargetComputer
     }
 
-    # }
     $TargetComputer = $TargetComputer | Where-object { $_ -ne $null } | Select -Unique
-    # Safety catch
     if ($null -eq $TargetComputer) {
         return
     }
-    # }
     return $TargetComputer
 }
 
@@ -81,7 +76,28 @@ function GetOutputFileString {
     <#
         .SYNOPSIS
             Takes input values for part of the filename, the root directory, subfolder title, and whether it should 
-            be in the reports or executables directory, and returns an acceptable filename.
+            be in the reports or executables directory, and returns an acceptable filepath.
+
+        .DESCRIPTION
+            Uses input to return a filepath that doesn't already exist in specified directory.
+
+        .PARAMETER TitleString
+            Main part of filename.
+
+        .PARAMETER Rootdirectory
+            Root directory where the output folder will be created.
+
+        .PARAMETER FolderTitle
+            Title for subfolder that will directly contain file.
+
+        .PARAMETER ReportOutput
+            Filepath returned will be in format: RootDirectory/REPORTS/date/FolderTitle/TitleString-Date.csv
+
+        .PARAMETER ExecutableOutput
+            Filepath returned will be in format: RootDirectory/EXECUTABLES/date/FolderTitle/TitleString-Date.ps1
+
+        .EXAMPLE
+            GetOutputFileString -TitleString "A220" -Rootdirectory "C:\Users\albddnbn\Documents" -FolderTitle "AssetInfo"
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -100,17 +116,9 @@ function GetOutputFileString {
 
     $thedate = Get-Date -Format 'yyyy-MM-dd'
 
-    # create outputfolder
-    if ($Reportoutput) {
-        $subfolder = 'reports'
-    }
-    elseif ($ExecutableOutput) {
-        $subfolder = 'executables'
-    }
-
     Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Subfolder determined to be: $subfolder."
 
-    $outputfolder = "$Rootdirectory\$subfolder\$thedate\$FolderTitle"
+    $outputfolder = "$Rootdirectory\$thedate\$FolderTitle"
 
     if (-not (Test-Path $outputfolder)) {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Couldn't find folder at: $outputfolder, creating it now."
@@ -119,19 +127,11 @@ function GetOutputFileString {
     $filename = "$TitleString-$thedate"
     $full_output_path = "$outputfolder\$filename"
     # make sure outputfiles dont exist
-    if ($ReportOutput) {
-        $x = 0
-        while ((Test-Path "$full_output_path.csv") -or (Test-Path "$full_output_path.xlsx")) {
-            $x++
-            $full_output_path = "$outputfolder\$filename-$x"
-        }
-    }
-    elseif ($ExecutableOutput) {
-        $x = 0
-        while ((Test-Path "$full_output_path.ps1") -or (Test-Path "$full_output_path.exe")) {
-            $x++
-            $full_output_path = "$outputfolder\$filename-$x"
-        }
+
+    $x = 0
+    while (Get-ChildItem -Path $outputfolder -File | ? { $_.BaseName -eq $filename }) {
+        $full_output_path = "$outputfolder\$filename-$x"
+        $x++
     }
 
     Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Full output path determined to be: $full_output_path."
@@ -145,7 +145,7 @@ function TestConnectivity {
         Tests connectivity to a single computer or list of computers by using Test-Connection -Quiet.
 
     .DESCRIPTION
-        Works fairly quickly, but doesn't give you any information about the computer's name, IP, or latency - judges online/offline by the 1 ping.
+        Does not create any report, just gives green or red output to terminal based on ping response(s).
 
     .PARAMETER ComputerName
         Target computer or computers of the function.
@@ -162,8 +162,6 @@ function TestConnectivity {
 
     .NOTES
         ---
-        Author: albddnbn (Alex B.)
-        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     
     param(
@@ -173,26 +171,17 @@ function TestConnectivity {
         $ComputerName,
         $PingCount = 1
     )
-    ## 1. Set PingCount - # of pings sent to each target machine.
-    ## 2. Handle Targetcomputer if not supplied through the pipeline.
-    ## 1. Set PingCount - # of pings sent to each target machine.
-    $PingCount = $PingCount
-
-    # $list_of_online_computers = [system.collections.arraylist]::new()
-    # $list_of_offline_computers = [system.collections.arraylist]::new()
     $online_results = [system.collections.arraylist]::new()
 
     ## Ping target machines $PingCount times and log result to terminal.
     ForEach ($single_computer in $ComputerName) {
         if (Test-Connection $single_computer -Count $PingCount -Quiet) {
             Write-Host "$single_computer is online." -ForegroundColor Green
-            
             $online_results.Add($single_computer) | Out-Null
         }
         else {
             Write-Host "$single_computer is offline." -ForegroundColor Red
         }
-    
     }
 
     return $online_results
@@ -234,10 +223,7 @@ function Get-AssetInformation {
         Get-AssetInformation -TargetComputer s-c127-01 -Outputfile C127-01-AssetInfo
 
     .NOTES
-        Monitor details show up in .csv but not .xlsx right now - 12.1.2023
-        ---
-        Author: albddnbn (Alex B.)
-        Project Site: https://github.com/albddnbn/PSTerminalMenu
+        Seems to be an issue with errors being returned when gathering monitor details - it effects the 'errored_machines' hostname output.
     #>
     param (
         [Parameter(
@@ -250,21 +236,18 @@ function Get-AssetInformation {
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## Ping Test for Connectivity:
+
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     } 
    
-    ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+
     $str_title_var = "AssetInfo"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
 
 
@@ -274,7 +257,6 @@ function Get-AssetInformation {
         $computer_model = get-ciminstance -class win32_computersystem | select -exp model
         $biosversion = get-ciminstance -class win32_bios | select -exp smbiosbiosversion
         $bioreleasedate = get-ciminstance -class win32_bios | select -exp releasedate
-        # Asset tag from BIOS (tested with dell computer)
         try {
             $command_configure_exe = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Dell\Command Configure\x86_64" -Filter "cctk.exe" -File -ErrorAction Silentlycontinue
             # returns a string like: 'Asset=2001234'
@@ -284,7 +266,7 @@ function Get-AssetInformation {
         catch {
             $asset_tag = Get-Ciminstance -class win32_systemenclosure | select -exp smbiosassettag
             # asus motherboard returned 'default string'
-            if ($asset_tag.ToLower() -eq 'default string') {
+            if (($asset_tag.ToLower() -eq 'default string') -or (-not $asset_tag)) {
                 $asset_tag = 'No asset tag set in BIOS'
             }    
         }
@@ -322,7 +304,7 @@ function Get-AssetInformation {
 
     $results = Invoke-Command -ComputerName $ComputerName -ScriptBlock $asset_info_scriptblock -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
 
-    ## Collects hostnames from any Invoke-Command error messages
+    ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     ## If there were any results - output them to terminal and/or report files as necessary.
@@ -337,27 +319,26 @@ function Get-AssetInformation {
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             
-            
             ## Try ImportExcel
             try {
 
                 Import-Module ImportExcel
 
-                ## xlsx attempt:
+
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
                     TableName            = $str_title_var
-                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    TableStyle           = 'Medium9'
                     BoldTopRow           = $true
                     WorksheetName        = $str_title_var
                     PassThru             = $true
-                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$Outputfile.csv"
                 $xlsx = $Content | Export-Excel @params # -ErrorAction SilentlyContinue
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
             catch {
@@ -381,6 +362,8 @@ function Get-ComputerDetails {
         Outputs: A .csv and .xlsx report file if anything other than 'n' is supplied for the $OutputFile parameter.
 
     .DESCRIPTION
+        Collects: Manufacturer, Model, Current User, Windows Build, BIOS Version, BIOS Release Date, and Total RAM from target machine(s).
+        Outputs: A .csv and .xlsx report file if anything other than 'n' is supplied for the $OutputFile parameter.
 
     .PARAMETER ComputerName
         Target computer or computers of the function.
@@ -407,12 +390,10 @@ function Get-ComputerDetails {
 
     .EXAMPLE
         Output details for all hostnames starting with g-pc-0 to terminal.
-        Get-ComputerDetails -TargetComputer 'g-pc-0' -outputfile 'n'
+        Get-ComputerDetails -TargetComputer 'g-pc-0'
 
     .NOTES
         ---
-        Author: albddnbn (Alex B.)
-        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param (
         [Parameter(
@@ -425,23 +406,18 @@ function Get-ComputerDetails {
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## Ping Test for Connectivity:
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     } 
-
 
     $str_title_var = "PCdetails"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
 
-    ## Save results to variable
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
         # Gets active user, computer manufacturer, model, BIOS version & release date, Win Build number, total RAM, last boot time, and total system up time.
         # object returned to $results list
@@ -465,21 +441,13 @@ function Get-ComputerDetails {
         $obj
     } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
 
-    ## Collects hostnames from any Invoke-Command error messages
+    ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     if ($results) {
-        ## Sort the results
         $results = $results | sort -property pscomputername
-        if (($outputfile.tolower() -eq 'n') -or ($null -eq $outputfile)) {
-            # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-            if ($results.count -le 2) {
-                $results | Format-List
-                # $results | Out-GridView
-            }
-            else {
-                $results | out-gridview -Title $str_title_var
-            }
+        if (($outputfile.tolower() -eq 'n') -or (-not $outputfile)) {
+            $results | out-gridview -Title $str_title_var
         }
         else {
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
@@ -488,24 +456,22 @@ function Get-ComputerDetails {
             $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             ## Try ImportExcel
             try {
-
                 Import-Module ImportExcel
 
-                ## xlsx attempt:
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
                     TableName            = $str_title_var
-                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    TableStyle           = 'Medium9'
                     BoldTopRow           = $true
                     WorksheetName        = $str_title_var
                     PassThru             = $true
-                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$Outputfile.csv"
                 $xlsx = $Content | Export-Excel @params
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
             catch {
@@ -528,9 +494,7 @@ function Get-ComputerDetails {
 
         Invoke-Item "$outputfile.csv"
     }
-    # read-host "Press enter to return results."
     return $results
-    
 }
 
 function Get-ConnectedPrinters {
@@ -553,7 +517,7 @@ function Get-ConnectedPrinters {
         Ex: Outputfile = 'A220', output file(s) will be in $env:PSMENU_DIR\reports\AssetInfo - A220\
 
     .PARAMETER FolderTitleSubstring
-        If specified, the function will create a folder in the 'reports' directory with the specified substring in the title, appended to the $REPORT_DIRECTORY String (relates to the function title).
+        If specified, the function will create a folder in the 'reports' directory with the specified substring in the title, appended to the $outputfile String (relates to the function title).
 
     .PARAMETER SendPings
         'y' = Ping test for connectivity before attempting main purpose of function.
@@ -568,8 +532,6 @@ function Get-ConnectedPrinters {
 
     .NOTES
         ---
-        Author: albddnbn (Alex B.)
-        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param (
         [Parameter(
@@ -580,26 +542,21 @@ function Get-ConnectedPrinters {
         [switch]$SendPings
     )
     $ComputerName = GetTargets -TargetComputer $ComputerName
-    ## Ping Test for Connectivity:
+
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     } 
      
-        
-    ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "Printers"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
 
     ## Scriptblock - lists connected/default printers
     $list_local_printers_block = {
-        # Everything will stay null, if there is no user logged in
         $obj = [PScustomObject]@{
             Username          = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
             DefaultPrinter    = $null
@@ -620,21 +577,17 @@ function Get-ConnectedPrinters {
         $obj
     }
 
-    ## Create empty results container to use during process block
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock $list_local_printers_block  -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
 
-    ## Collects hostnames from any Invoke-Command error messages
+    ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     if ($results) {
-        ## 1. Sort any existing results by computername
         $results = $results | sort -property pscomputername
-        ## 2. Output to gridview if user didn't choose report output.
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title $str_title_var
         }
         else {
-            ## 3. Create .csv/.xlsx reports if possible
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -645,16 +598,16 @@ function Get-ConnectedPrinters {
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
                     TableName            = $str_title_var
-                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    TableStyle           = 'Medium9'
                     BoldTopRow           = $true
                     WorksheetName        = $str_title_var
                     PassThru             = $true
-                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$Outputfile.csv"
                 $xlsx = $Content | Export-Excel @params
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
             catch {
@@ -665,7 +618,7 @@ function Get-ConnectedPrinters {
                 Invoke-item "$($outputfile | split-path -Parent)"
             }
             catch {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+
                 Invoke-item "$outputfile.csv"
             }
         }
@@ -735,20 +688,18 @@ function Get-CurrentUser {
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## Ping Test for Connectivity:
+
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     } 
 
-    ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+
     $str_title_var = "CurrentUsers"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -761,18 +712,18 @@ function Get-CurrentUser {
         }
         $obj
     } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
-    ## Collects hostnames from any Invoke-Command error messages
+    ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     if ($results) {
-        ## 1. Sort any existing results by computername
+
         $results = $results | sort -property pscomputername
-        ## 2. Output to gridview if user didn't choose report output.
+
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -title $str_title_var
         }
         else {
-            ## 3. Create .csv/.xlsx reports if possible
+
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -786,16 +737,16 @@ function Get-CurrentUser {
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
                     TableName            = $str_title_var
-                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    TableStyle           = 'Medium9'
                     BoldTopRow           = $true
                     WorksheetName        = $str_title_var
                     PassThru             = $true
-                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$Outputfile.csv"
                 $xlsx = $Content | Export-Excel @params
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
             catch {
@@ -806,7 +757,7 @@ function Get-CurrentUser {
                 Invoke-item "$($outputfile | split-path -Parent)"
             }
             catch {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+
                 Invoke-item "$outputfile.csv"
             }
         }
@@ -873,20 +824,18 @@ function Get-InstalledDotNetversions {
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## Ping Test for Connectivity:
+
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }    
 
-    ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+
     $str_title_var = "InstalledDotNet"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -904,14 +853,14 @@ function Get-InstalledDotNetversions {
         #     $single_result
         # }
 
-        ## 1. Sort any existing results by computername
+
         $results = $results | sort -property pscomputername
-        ## 2. Output to gridview if user didn't choose report output.
+
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title "Installed .NET Versions"
         }
         else {
-            ## 3. Create .csv/.xlsx reports if possible
+
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -922,16 +871,16 @@ function Get-InstalledDotNetversions {
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
                     TableName            = $str_title_var
-                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    TableStyle           = 'Medium9'
                     BoldTopRow           = $true
                     WorksheetName        = $str_title_var
                     PassThru             = $true
-                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$Outputfile.csv"
                 $xlsx = $Content | Export-Excel @params
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
             catch {
@@ -942,7 +891,7 @@ function Get-InstalledDotNetversions {
                 Invoke-item "$($outputfile | split-path -Parent)"
             }
             catch {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+
                 Invoke-item "$outputfile.csv"
             }
         }
@@ -1018,19 +967,17 @@ Function Get-IntuneHardwareIDs {
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## Ping Test for Connectivity:
+
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }    
-    ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+
     $str_title_var = "IntuneHardwareIDs"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
 
     ## make sure there's a .csv on the end of output file?
@@ -1146,8 +1093,8 @@ function Get-InventoryDetails {
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## Ping Test for Connectivity:
-    ## Ping Test for Connectivity:
+
+
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     } 
@@ -1160,9 +1107,7 @@ function Get-InventoryDetails {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -scriptblock {
@@ -1209,14 +1154,14 @@ function Get-InventoryDetails {
     ## This section will attempt to output a CSV and XLSX report if anything other than 'n' was used for $Outputfile.
     ## If $Outputfile = 'n', results will be displayed in a gridview, with title set to $str_title_var.
     if ($results) {
-        ## 1. Sort any existing results by computername
+
         $results = $results | sort -property pscomputername
-        ## 2. Output to gridview if user didn't choose report output.
+
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -title $str_title_var
         }
         else {
-            ## 3. Create .csv/.xlsx reports if possible
+
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             ## Try ImportExcel
             try {
@@ -1227,16 +1172,16 @@ function Get-InventoryDetails {
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
                     TableName            = $str_title_var
-                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    TableStyle           = 'Medium9'
                     BoldTopRow           = $true
                     WorksheetName        = $str_title_var
                     PassThru             = $true
-                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$Outputfile.csv"
                 $xlsx = $Content | Export-Excel @params
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
             catch {
@@ -1247,7 +1192,7 @@ function Get-InventoryDetails {
                 Invoke-item "$($outputfile | split-path -Parent)"
             }
             catch {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+
                 Invoke-item "$outputfile.csv"
             }
         }
@@ -1305,42 +1250,27 @@ function Ping-TestReport {
         $PingCount,
         [string]$Outputfile = ''
     )
-    ## 1. Set date and AM / PM variables
-    ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
-    ## 3. If provided, use outputfile input to create report output filepath.
-    ## 4. Create arraylist to store results
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## 1. Set date and AM / PM variables
     $am_pm = (Get-Date).ToString('tt')
 
-    ## 2. If provided, use outputfile input to create report output filepath.
-    ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "Pings-$Outputfile-$(Get-Date -Format 'hh-MM')$($am_pm)"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
 
-
-    ## 3. Create arraylist to store results
+    ## Create arraylist to store results
     $results = [system.collections.arraylist]::new()
 
     $PingCount = [int]$PingCount
 
-    ## 1. Ping EACH Target computer / record results into ps object, add to arraylist (results_container)
-    ## 2. Set object property values:
-    ## 3. Send pings - object property values are derived from resulting object
-    ## 4. Number of responses
-    ## 5. Calculate average response time for successful responses
-    ## 6. Calculate packet loss percentage
+
     ForEach ($single_computer in $ComputerName) {
-        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+
         if ($single_computer) {
 
             ## check if network path exists first - that way we don't waste time pinging machine thats offline?
@@ -1349,9 +1279,7 @@ function Ping-TestReport {
                 continue
             }
             
-
-
-            ## 2. Create object to store results of ping test on single machine
+            ## Create object to store results of ping test on single machine
             $obj = [pscustomobject]@{
                 Sourcecomputer       = $env:COMPUTERNAME
                 ComputerHostName     = $single_computer
@@ -1361,11 +1289,11 @@ function Ping-TestReport {
                 PacketLossPercentage = 0
             }
             Write-Host "Sending $pingcount pings to $single_computer..."
-            ## 3. Send $PINGCOUNT number of pings to target device, store results
+            ## Send $PINGCOUNT number of pings to target device, store results
             $send_pings = Test-Connection -ComputerName $single_computer -count $PingCount -ErrorAction SilentlyContinue
-            ## 4. Set number of responses from target machine
+            ## Set number of responses from target machine
             $obj.responses = $send_pings.count
-            ## 5. Calculate average response time for successful responses
+            ## Calculate average response time for successful responses
             $sum_of_response_times = $($send_pings | measure-object responsetime -sum)
             if ($obj.Responses -eq 0) {
                 $obj.AvgResponseTime = 0
@@ -1373,25 +1301,24 @@ function Ping-TestReport {
             else {
                 $obj.avgresponsetime = $sum_of_response_times.sum / $obj.responses
             }
-            ## 6. Calculate packet loss percentage - divide total pings by responses
+            ## Calculate packet loss percentage - divide total pings by responses
             $total_drops = $obj.TotalPings - $obj.Responses
             $obj.PacketLossPercentage = ($total_drops / $($obj.TotalPings)) * 100
 
-            ## 7. Add object to container created in BEGIN block
+            ## Add object to container created in BEGIN block
             $results.add($obj) | Out-Null
         }
     }
 
-    ## Report file creation or terminal output
     if ($results) {
-        ## 1. Sort any existing results by computername
+
         $results = $results | sort -property pscomputername
-        ## 2. Output to gridview if user didn't choose report output.
+
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview
         }
         else {
-            ## 3. Create .csv/.xlsx reports if possible
+
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             ## Try ImportExcel
             try {
@@ -1399,16 +1326,16 @@ function Ping-TestReport {
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
                     TableName            = $str_title_var
-                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    TableStyle           = 'Medium9'
                     BoldTopRow           = $true
                     WorksheetName        = $str_title_var
                     PassThru             = $true
-                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$Outputfile.csv"
                 $xlsx = $Content | Export-Excel @params
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
             catch {
@@ -1419,7 +1346,7 @@ function Ping-TestReport {
                 Invoke-item "$($outputfile | split-path -Parent)"
             }
             catch {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+
                 Invoke-item "$outputfile.csv"
             }
         }
@@ -1427,7 +1354,7 @@ function Ping-TestReport {
     else {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
     }
-    # read-host "`nPress [ENTER] to return results."
+
     return $results
 }
 
@@ -1485,30 +1412,22 @@ function Scan-ForAppOrFilePath {
         [String]$Outputfile,
         [switch]$SendPings
     )
-    ## 1. Set date
-    ## 2. Handle targetcomputer if not submitted through pipeline
-    ## 3. Create output filepath, clean any input file search paths that are local,  
-    ## and handle TargetComputer input / filter offline hosts.
-    ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## Ping Test for Connectivity:
+
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     } 
         
 
-    ## 3. Outputfile handling - either create default, create filenames using input - report files are mandatory 
-    ##    in this function.
+    ## Outputfile handling - either create default, create filenames using input - report files are mandatory in this function.
     $str_title_var = "$SearchType-scan"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
         
     if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
@@ -1603,15 +1522,11 @@ function Scan-ForAppOrFilePath {
             #     $obj
             # }
         } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
-
-        # $search_result
-        # read-host "enter"
     }
 
-    ## Collects hostnames from any Invoke-Command error messages
+    ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
  
-    ## 1. Output findings (if any) to report files or terminal
     if ($results) {
         $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
         "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
@@ -1622,17 +1537,17 @@ function Scan-ForAppOrFilePath {
             $params = @{
                 AutoSize             = $true
                 TitleBackgroundColor = 'Blue'
-                TableName            = "$REPORT_DIRECTORY"
-                TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                TableName            = "$outputfile"
+                TableStyle           = 'Medium9'
                 BoldTopRow           = $true
                 WorksheetName        = "$SearchType-Search"
                 PassThru             = $true
-                Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                Path                 = "$Outputfile.xlsx"
             }
             $Content = Import-Csv "$Outputfile.csv"
             $xlsx = $Content | Export-Excel @params
             $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-            $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+            $ws.View.ShowGridLines = $false
             Close-ExcelPackage $xlsx
         }
         catch {
@@ -1651,7 +1566,7 @@ function Scan-ForAppOrFilePath {
     else {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
     }
-    # Read-Host "`nPress [ENTER] to return results."
+
     return $results
 }
 
@@ -1701,32 +1616,27 @@ function Scan-SoftwareInventory {
         $AppsToLookFor,
         [switch]$SendPings
     )
-    ## 1. Define title, date variables
-    ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
-    ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-    ## 4. Create empty results container
-    $AppsToLookFor = $AppsToLookFor.split(",")
-    if ($AppsToLookFor -isnot [array]) {
-        $AppsToLookFor = @($AppsToLookFor)
+    if ($AppsToLookFor) {
+        $AppsToLookFor = $AppsToLookFor.split(",")
+        if ($AppsToLookFor -isnot [array]) {
+            $AppsToLookFor = @($AppsToLookFor)
+        }
     }
-    ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
 
-    ## Ping Test for Connectivity:
+
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }        
-    ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+    ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     $str_title_var = "SoftwareScan"
 
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $REPORT_DIRECTORY = $outputfile            
-
-        $OutputFile = GetOutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory (Get-Location).Path -FolderTitle $REPORT_DIRECTORY -ReportOutput
+        $OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
     }
         
     $results = invoke-command -computername $ComputerName -scriptblock {
@@ -1797,10 +1707,8 @@ function Scan-SoftwareInventory {
 
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
-    ## 1. Get list of unique computer names from results - use it to sort through all results to create a list of apps for 
-    ##    a specific computer, output apps to report, then move on to next iteration of loop.
+    ## Outputs results
     if ($results) {
-        ## 1. get list of UNIQUE pscomputername s from the results - a file needs to be created for EACH computer.
         $unique_hostnames = $($results.pscomputername) | select -Unique
 
         if ($errored_machines) {
@@ -1818,21 +1726,21 @@ function Scan-SoftwareInventory {
             $apps | Export-Csv -Path "$outputfile-$single_computer_name.csv" -NoTypeInformation
             ## Try ImportExcel
             try {
-                ## xlsx attempt:
+
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
-                    TableName            = "$REPORT_DIRECTORY"
-                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    TableName            = "$outputfile"
+                    TableStyle           = 'Medium9'
                     BoldTopRow           = $true
                     WorksheetName        = "$single_computer_name Apps"
                     PassThru             = $true
-                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$outputfile-$single_computer_name.csv"
                 $xlsx = $Content | Export-Excel @params
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
             catch {
@@ -1849,7 +1757,7 @@ function Scan-SoftwareInventory {
             Invoke-item "$outputfile-$($unique_hostnames | select -first 1).csv"
         }
     }
-    # read-host "`nPress [ENTER] to return results."
+
     return $results
 }
 
@@ -1946,8 +1854,6 @@ function Test-ConnectivityQuick {
 
     ## COLLECTIONS LISTS - successful/failed pings.
     $results = [system.collections.arraylist]::new()
-    # $list_of_online_computers = [system.collections.arraylist]::new()
-    # $list_of_offline_computers = [system.collections.arraylist]::new()
 
     ## Ping target machines $PingCount times and log result to terminal.
     ForEach ($single_computer in $ComputerName) {
@@ -1967,13 +1873,11 @@ function Test-ConnectivityQuick {
 
             if ($connection_result) {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online [$ping_responses responses]" -foregroundcolor green
-                # $list_of_online_computers.add($single_computer) | Out-Null
                 $ping_response_obj.Status = 'online'
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
                 Write-Host "$single_computer is not online." -foregroundcolor red
-                # $list_of_offline_computers.add($single_computer) | Out-Null
                 $ping_response_obj.Status = 'offline'
             }
 
