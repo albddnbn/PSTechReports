@@ -285,16 +285,16 @@ function Get-AssetInformation {
             $results | out-gridview -Title $str_title_var
         }
         else {
+            $outputfile = $outputfile | select -first 1
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
+
             
-            ## Try ImportExcel
-            try {
-
+            if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-
-
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -306,12 +306,12 @@ function Get-AssetInformation {
                     Path                 = "$Outputfile.xlsx"
                 }
                 $Content = Import-Csv "$Outputfile.csv"
-                $xlsx = $Content | Export-Excel @params # -ErrorAction SilentlyContinue
+                $xlsx = $Content | Export-Excel @params
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
-            catch {
+            else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
             Invoke-item "$($outputfile | split-path -Parent)"
@@ -424,11 +424,12 @@ function Get-ComputerDetails {
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
             ## Try ImportExcel
-            try {
+            if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -445,7 +446,7 @@ function Get-ComputerDetails {
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
-            catch {
+            else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
             
@@ -562,10 +563,13 @@ function Get-ConnectedPrinters {
         else {
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
             
             ## Try ImportExcel
-            try {
+            if (Get-Module -ListAvailable -Name ImportExcel) {
+                Import-Module ImportExcel
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -582,9 +586,10 @@ function Get-ConnectedPrinters {
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
-            catch {
+            else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
+            
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -699,13 +704,12 @@ function Get-CurrentUser {
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
          
-            ## Try ImportExcel
-            try {
-
+            if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -722,9 +726,10 @@ function Get-CurrentUser {
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
-            catch {
+            else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
+            
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -837,10 +842,13 @@ function Get-InstalledDotNetversions {
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
            
             ## Try ImportExcel
-            try {
+            if (Get-Module -ListAvailable -Name ImportExcel) {
+                Import-Module ImportExcel
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -857,9 +865,10 @@ function Get-InstalledDotNetversions {
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
-            catch {
+            else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
+            
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -880,7 +889,6 @@ function Get-InstalledDotNetversions {
 
     return $results
 }
-
 Function Get-IntuneHardwareIDs {
     <#
     .SYNOPSIS
@@ -959,33 +967,17 @@ Function Get-IntuneHardwareIDs {
     if ($outputfile -notlike "*.csv") {
         $outputfile += ".csv"
     }
+
+
     ## Find Get-WindowsAutopilotInfo script and dot source - hopefully from Supportfiles, will check internet if necessary.
-    $getwindowsautopilotinfo = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "Get-WindowsAutoPilotInfo.ps1" -File -ErrorAction SilentlyContinue
-    if (-not $getwindowsautopilotinfo) {
-        # Attempt to download script if there's Internet
-        # $check_internet_connection = Test-NetConnection "google.com" -ErrorAction SilentlyContinue
-        $check_internet_connection = Test-Connection "google.com" -Count 2 -ErrorAction SilentlyContinue
-        if ($check_internet_connection) {
-            # check for nuget / install
-            $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
-            if ($null -eq $check_for_nuget) {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: NuGet not found, installing now."
-                Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-            }
-            Install-Script -Name 'Get-WindowsAutopilotInfo' -Force 
-        }
-        else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: " -NoNewline
-            Write-Host "No internet connection detected, unable to generate hardware ID .csv." -ForegroundColor Red
-            return
-        }
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Get-WindowsAutopilotInfo.ps1 not found in supportfiles directory, unable to generate hardware ID .csv." -ForegroundColor Red
-        return
+    # $getwindowsautopilotinfo = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "Get-WindowsAutoPilotInfo.ps1" -File -ErrorAction SilentlyContinue
+    $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+    if ($null -eq $check_for_nuget) {
+        # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: NuGet not found, installing now."
+        Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
     }
-    else {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Found $($getwindowsautopilotinfo.fullname), importing.`r" -NoNewline
-        Get-ChildItem "$env:SUPPORTFILES_DIR" -recurse | unblock-file
-    }
+    Install-Script -Name 'Get-WindowsAutopilotInfo' -Force -requiredversion 3.8
+
 
     ## Define parameters to be used when executing Get-WindowsAutoPilotInfo
     $params = @{
@@ -996,12 +988,7 @@ Function Get-IntuneHardwareIDs {
     }
     ## Attempt to use cmdlet from installing script from internet, if fails - revert to script in support 
     ## files (it should have to exist at this point).
-    try {
-        . "$($getwindowsautopilotinfo.fullname)" @params
-    }
-    catch {
-        Get-WindowsAutoPilotInfo @params
-    }
+    &"C:\Program Files\WindowsPowerShell\Scripts\Get-WindowsAutoPilotInfo.ps1" @params
 
     ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
     try {
@@ -1140,10 +1127,8 @@ function Get-InventoryDetails {
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             ## Try ImportExcel
-            try {
-
+            if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -1160,9 +1145,11 @@ function Get-InventoryDetails {
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
-            catch {
+            else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
+            
+            
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -1298,7 +1285,8 @@ function Ping-TestReport {
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             ## Try ImportExcel
-            try {
+            if (Get-Module -ListAvailable -Name ImportExcel) {
+                Import-Module ImportExcel
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -1315,9 +1303,10 @@ function Ping-TestReport {
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
-            catch {
+            else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
+            
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -1381,13 +1370,15 @@ function Scan-ForAppOrFilePath {
             Mandatory = $true
         )]
         $ComputerName,
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Path', 'App', 'File', 'Folder')]
-        [String]$SearchType,
+        # [Parameter(Mandatory = $true)]
+        # [ValidateSet('Path', 'App', 'File', 'Folder')]
+        # [String]$SearchType,
         [Parameter(Mandatory = $true)]
         [String]$Item,
         [String]$Outputfile,
-        [switch]$SendPings
+        [switch]$SendPings,
+        [switch]$App,
+        [switch]$Path
     )
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
@@ -1399,7 +1390,7 @@ function Scan-ForAppOrFilePath {
         
 
     ## Outputfile handling - either create default, create filenames using input - report files are mandatory in this function.
-    $str_title_var = "$SearchType-scan"
+    $str_title_var = "item-scan"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
@@ -1408,7 +1399,8 @@ function Scan-ForAppOrFilePath {
         $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
         
-    if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
+    # if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
+    if ($Path) {
 
         $results = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
             $obj = [PSCustomObject]@{
@@ -1444,7 +1436,8 @@ function Scan-ForAppOrFilePath {
     
     }
     ## Application search
-    elseif ($SearchType -eq 'App') {
+    # elseif ($SearchType -eq 'App') {
+    elseif ($App) {
 
         $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
             # $app_matches = [System.Collections.ArrayList]::new()
@@ -1510,15 +1503,15 @@ function Scan-ForAppOrFilePath {
         "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
         $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append      
         ## Try ImportExcel
-        try {
-            ## xlsx attempt:
+        if (Get-Module -ListAvailable -Name ImportExcel) {
+            Import-Module ImportExcel
             $params = @{
                 AutoSize             = $true
                 TitleBackgroundColor = 'Blue'
-                TableName            = "$outputfile"
+                TableName            = $str_title_var
                 TableStyle           = 'Medium9'
                 BoldTopRow           = $true
-                WorksheetName        = "$SearchType-Search"
+                WorksheetName        = $str_title_var
                 PassThru             = $true
                 Path                 = "$Outputfile.xlsx"
             }
@@ -1528,9 +1521,10 @@ function Scan-ForAppOrFilePath {
             $ws.View.ShowGridLines = $false
             Close-ExcelPackage $xlsx
         }
-        catch {
+        else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
         }
+        
         ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
         try {
             Invoke-item "$($outputfile | split-path -Parent)"
@@ -1702,8 +1696,7 @@ function Scan-SoftwareInventory {
 
             $apps | Export-Csv -Path "$outputfile-$single_computer_name.csv" -NoTypeInformation
             ## Try ImportExcel
-            try {
-
+            if (Get-Module ImportExcel -ListAvailable) {
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -1719,9 +1712,6 @@ function Scan-SoftwareInventory {
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
-            }
-            catch {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
                 
         }
