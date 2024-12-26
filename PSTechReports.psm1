@@ -889,7 +889,6 @@ function Get-InstalledDotNetversions {
 
     return $results
 }
-
 Function Get-IntuneHardwareIDs {
     <#
     .SYNOPSIS
@@ -968,33 +967,17 @@ Function Get-IntuneHardwareIDs {
     if ($outputfile -notlike "*.csv") {
         $outputfile += ".csv"
     }
+
+
     ## Find Get-WindowsAutopilotInfo script and dot source - hopefully from Supportfiles, will check internet if necessary.
-    $getwindowsautopilotinfo = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "Get-WindowsAutoPilotInfo.ps1" -File -ErrorAction SilentlyContinue
-    if (-not $getwindowsautopilotinfo) {
-        # Attempt to download script if there's Internet
-        # $check_internet_connection = Test-NetConnection "google.com" -ErrorAction SilentlyContinue
-        $check_internet_connection = Test-Connection "google.com" -Count 2 -ErrorAction SilentlyContinue
-        if ($check_internet_connection) {
-            # check for nuget / install
-            $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
-            if ($null -eq $check_for_nuget) {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: NuGet not found, installing now."
-                Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-            }
-            Install-Script -Name 'Get-WindowsAutopilotInfo' -Force 
-        }
-        else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: " -NoNewline
-            Write-Host "No internet connection detected, unable to generate hardware ID .csv." -ForegroundColor Red
-            return
-        }
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Get-WindowsAutopilotInfo.ps1 not found in supportfiles directory, unable to generate hardware ID .csv." -ForegroundColor Red
-        return
+    # $getwindowsautopilotinfo = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "Get-WindowsAutoPilotInfo.ps1" -File -ErrorAction SilentlyContinue
+    $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+    if ($null -eq $check_for_nuget) {
+        # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: NuGet not found, installing now."
+        Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
     }
-    else {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Found $($getwindowsautopilotinfo.fullname), importing.`r" -NoNewline
-        Get-ChildItem "$env:SUPPORTFILES_DIR" -recurse | unblock-file
-    }
+    Install-Script -Name 'Get-WindowsAutopilotInfo' -Force -requiredversion 3.8
+
 
     ## Define parameters to be used when executing Get-WindowsAutoPilotInfo
     $params = @{
@@ -1005,12 +988,7 @@ Function Get-IntuneHardwareIDs {
     }
     ## Attempt to use cmdlet from installing script from internet, if fails - revert to script in support 
     ## files (it should have to exist at this point).
-    try {
-        . "$($getwindowsautopilotinfo.fullname)" @params
-    }
-    catch {
-        Get-WindowsAutoPilotInfo @params
-    }
+    &"C:\Program Files\WindowsPowerShell\Scripts\Get-WindowsAutoPilotInfo.ps1" @params
 
     ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
     try {
