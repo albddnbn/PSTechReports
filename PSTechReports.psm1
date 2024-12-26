@@ -285,9 +285,13 @@ function Get-AssetInformation {
             $results | out-gridview -Title $str_title_var
         }
         else {
+            $outputfile = $outputfile | select -first 1
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
+
             
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
@@ -420,7 +424,9 @@ function Get-ComputerDetails {
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
@@ -557,7 +563,9 @@ function Get-ConnectedPrinters {
         else {
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
             
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
@@ -696,7 +704,9 @@ function Get-CurrentUser {
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
          
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
@@ -832,7 +842,9 @@ function Get-InstalledDotNetversions {
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            if ($errored_machines) {
+                $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+            }
            
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
@@ -1702,8 +1714,7 @@ function Scan-SoftwareInventory {
 
             $apps | Export-Csv -Path "$outputfile-$single_computer_name.csv" -NoTypeInformation
             ## Try ImportExcel
-            try {
-                Import-Module ImportExcel
+            if (Get-Module ImportExcel -ListAvailable) {
                 $params = @{
                     AutoSize             = $true
                     TitleBackgroundColor = 'Blue'
@@ -1719,9 +1730,6 @@ function Scan-SoftwareInventory {
                 $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
-            }
-            catch {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
                 
         }
