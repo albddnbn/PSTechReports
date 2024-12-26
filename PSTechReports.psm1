@@ -1392,13 +1392,15 @@ function Scan-ForAppOrFilePath {
             Mandatory = $true
         )]
         $ComputerName,
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Path', 'App', 'File', 'Folder')]
-        [String]$SearchType,
+        # [Parameter(Mandatory = $true)]
+        # [ValidateSet('Path', 'App', 'File', 'Folder')]
+        # [String]$SearchType,
         [Parameter(Mandatory = $true)]
         [String]$Item,
         [String]$Outputfile,
-        [switch]$SendPings
+        [switch]$SendPings,
+        [switch]$App,
+        [switch]$Path
     )
 
     $ComputerName = GetTargets -TargetComputer $ComputerName
@@ -1410,7 +1412,7 @@ function Scan-ForAppOrFilePath {
         
 
     ## Outputfile handling - either create default, create filenames using input - report files are mandatory in this function.
-    $str_title_var = "$SearchType-scan"
+    $str_title_var = "item-scan"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
@@ -1419,7 +1421,8 @@ function Scan-ForAppOrFilePath {
         $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
         
-    if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
+    # if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
+    if ($Path) {
 
         $results = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
             $obj = [PSCustomObject]@{
@@ -1455,7 +1458,8 @@ function Scan-ForAppOrFilePath {
     
     }
     ## Application search
-    elseif ($SearchType -eq 'App') {
+    # elseif ($SearchType -eq 'App') {
+    elseif ($App) {
 
         $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
             # $app_matches = [System.Collections.ArrayList]::new()
