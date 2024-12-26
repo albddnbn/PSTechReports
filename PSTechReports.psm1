@@ -988,7 +988,10 @@ Function Get-IntuneHardwareIDs {
     }
     ## Attempt to use cmdlet from installing script from internet, if fails - revert to script in support 
     ## files (it should have to exist at this point).
-    &"C:\Program Files\WindowsPowerShell\Scripts\Get-WindowsAutoPilotInfo.ps1" @params
+    $script_path = Get-InstalledScript -Name Get-WindowsAutoPilotInfo | Select -Exp InstalledLocation
+
+
+    &"$script_path\Get-WindowsAutoPilotInfo.ps1" @params
 
     ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
     try {
