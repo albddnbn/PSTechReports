@@ -218,7 +218,8 @@ function Get-AssetInformation {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+
     }
 
 
@@ -386,7 +387,7 @@ function Get-ComputerDetails {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -524,7 +525,7 @@ function Get-ConnectedPrinters {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     ## Scriptblock - lists connected/default printers
@@ -675,7 +676,7 @@ function Get-CurrentUser {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -811,7 +812,7 @@ function Get-InstalledDotNetversions {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
@@ -955,7 +956,7 @@ Function Get-IntuneHardwareIDs {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     ## make sure there's a .csv on the end of output fileWhere-Object
@@ -1065,7 +1066,7 @@ function Get-InventoryDetails {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -scriptblock {
@@ -1218,7 +1219,7 @@ function Ping-TestReport {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     ## Create arraylist to store results
@@ -1389,7 +1390,7 @@ function Scan-ForAppOrFilePath {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     # if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
@@ -1599,7 +1600,7 @@ function Scan-SoftwareInventory {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
     else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
+        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
     }
 
     $results = invoke-command -computername $ComputerName -scriptblock {
