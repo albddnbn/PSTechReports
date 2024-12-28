@@ -1,4 +1,4 @@
-Function GetTargets {
+﻿Function GetTargets {
     <#
     .SYNOPSIS
         Queries Active Directory for computer names based on hostname, hostname substring, or comma-separated list of hostnames.
@@ -64,7 +64,7 @@ Function GetTargets {
         $TargetComputer = $NewTargetComputer
     }
 
-    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null } | Select -Unique
+    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null } | Select-Object -Unique
     if ($null -eq $TargetComputer) {
         return
     }
@@ -94,7 +94,9 @@ function getoutputstring {
     while ($true) {
         if ((Test-Path "$full_path.csv" -erroraction silentlycontinue) -or (Test-Path "$full_path.xlsx" -erroraction silentlycontinue)) {
             Write-Host "Tested path - $full_path - creating new" -foregroundcolor yellow
-
+            if ($append -ne 0) {
+                $TitleString = $TitleString -replace ".{2}$"
+            }
             $TitleString = "$TitleString-$append"
             $full_path = "$RootDirectory\$thedate\$TitleString"
             $append++
@@ -132,7 +134,7 @@ function TestConnectivity {
     .NOTES
         ---
     #>
-    
+
     param(
         [Parameter(
             Mandatory = $true
@@ -208,8 +210,8 @@ function Get-AssetInformation {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    } 
-   
+    }
+
 
     $str_title_var = "AssetInfo"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
@@ -224,9 +226,9 @@ function Get-AssetInformation {
     ## Asset info scriptblock used to get local asset info from each target computer.
     $asset_info_scriptblock = {
         # computer model (ex: 'precision 3630 tower'), BIOS version, and BIOS release date
-        $computer_model = get-ciminstance -class win32_computersystem | select -exp model
-        $biosversion = get-ciminstance -class win32_bios | select -exp smbiosbiosversion
-        $bioreleasedate = get-ciminstance -class win32_bios | select -exp releasedate
+        $computer_model = get-ciminstance -class win32_computersystem | Select-Object -exp model
+        $biosversion = get-ciminstance -class win32_bios | Select-Object -exp smbiosbiosversion
+        $bioreleasedate = get-ciminstance -class win32_bios | Select-Object -exp releasedate
         try {
             $command_configure_exe = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Dell\Command Configure\x86_64" -Filter "cctk.exe" -File -ErrorAction Silentlycontinue
             # returns a string like: 'Asset=2001234'
@@ -234,17 +236,17 @@ function Get-AssetInformation {
             $asset_tag = $asset_tag -replace 'Asset=', ''
         }
         catch {
-            $asset_tag = Get-Ciminstance -class win32_systemenclosure | select -exp smbiosassettag
+            $asset_tag = Get-Ciminstance -class win32_systemenclosure | Select-Object -exp smbiosassettag
             # asus motherboard returned 'default string'
             if (($asset_tag.ToLower() -eq 'default string') -or (-not $asset_tag)) {
                 $asset_tag = 'No asset tag set in BIOS'
-            }    
+            }
         }
-        $computer_serial_num = get-ciminstance -class win32_bios | select -exp serialnumber
+        $computer_serial_num = get-ciminstance -class win32_bios | Select-Object -exp serialnumber
         # get monitor info and create a string from it (might be unnecessary, or a lengthy approach):
         $monitors = Get-CimInstance WmiMonitorId -Namespace root\wmi -ComputerName $ComputerName -ErrorAction SilentlyContinue
         if ($monitors) {
-            $monitors = $monitors | Select Active, ManufacturerName, UserFriendlyName, SerialNumberID, YearOfManufacture
+            $monitors = $monitors | Select-Object Active, ManufacturerName, UserFriendlyName, SerialNumberID, YearOfManufacture
             $monitor_string = ""
             $monitor_count = 0
             $monitors | ForEach-Object {
@@ -272,27 +274,27 @@ function Get-AssetInformation {
         return $obj
     }
 
-    $results = Invoke-Command -ComputerName $ComputerName -ScriptBlock $asset_info_scriptblock -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+    $results = Invoke-Command -ComputerName $ComputerName -ScriptBlock $asset_info_scriptblock -ErrorVariable RemoteError | Select-Object * -ExcludeProperty RunspaceId, PSshowcomputername
 
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     ## If there were any results - output them to terminal and/or report files as necessary.
     if ($results) {
-        ## Sort the results
-        $results = $results | sort -property pscomputername
+        ## Sort-Object the results
+        $results = $results | Sort-Object -property pscomputername
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title $str_title_var
         }
         else {
-            $outputfile = $outputfile | select -first 1
+            $outputfile = $outputfile | Select-Object -first 1
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             }
 
-            
+
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
                 $params = @{
@@ -367,7 +369,7 @@ function Get-ComputerDetails {
     #>
     param (
         [Parameter(
-            Mandatory = $true, ValueFromPipeline = $true
+            Mandatory = $true
         )]
         $ComputerName,
         [string]$Outputfile,
@@ -378,7 +380,7 @@ function Get-ComputerDetails {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    } 
+    }
 
     $str_title_var = "PCdetails"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
@@ -410,19 +412,19 @@ function Get-ComputerDetails {
             SystemUptime    = $uptime
         }
         $obj
-    } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
+    } -ErrorVariable RemoteError | Select-Object * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
 
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     if ($results) {
-        $results = $results | sort -property pscomputername
+        $results = $results | Sort-Object -property pscomputername
         if (($outputfile.tolower() -eq 'n') -or (-not $outputfile)) {
             $results | out-gridview -Title $str_title_var
         }
         else {
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-            
+
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -449,7 +451,7 @@ function Get-ComputerDetails {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            
+
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
             }
@@ -517,8 +519,8 @@ function Get-ConnectedPrinters {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    } 
-     
+    }
+
     $str_title_var = "Printers"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
@@ -539,24 +541,24 @@ function Get-ConnectedPrinters {
         # Only need to check for connected printers if a user is logged in.
         if ($obj.Username) {
             # get connected printers:
-            get-ciminstance -class win32_printer | select name, Default | ForEach-Object {
+            get-ciminstance -class win32_printer | Select-Object name, Default | ForEach-Object {
                 if (($_.name -notin ('Microsoft Print to PDF', 'Fax')) -and ($_.name -notlike "*OneNote*")) {
                     if ($_.name -notlike "Send to*") {
                         $obj.ConnectedPrinters = "$($obj.ConnectedPrinters), $($_.name)"
                     }
-                }   
+                }
             }
         }
         $obj
     }
 
-    $results = Invoke-Command -ComputerName $ComputerName -Scriptblock $list_local_printers_block  -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+    $results = Invoke-Command -ComputerName $ComputerName -Scriptblock $list_local_printers_block  -ErrorVariable RemoteError | Select-Object * -ExcludeProperty RunspaceId, PSshowcomputername
 
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     if ($results) {
-        $results = $results | sort -property pscomputername
+        $results = $results | Sort-Object -property pscomputername
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title $str_title_var
         }
@@ -566,7 +568,7 @@ function Get-ConnectedPrinters {
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             }
-            
+
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
@@ -589,7 +591,7 @@ function Get-ConnectedPrinters {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            
+
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -625,7 +627,7 @@ function Get-CurrentUser {
         Target computer or computers of the function.
         Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
+        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER OutputFile
@@ -668,7 +670,7 @@ function Get-CurrentUser {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    } 
+    }
 
 
     $str_title_var = "CurrentUsers"
@@ -689,13 +691,13 @@ function Get-CurrentUser {
 
         }
         $obj
-    } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+    } -ErrorVariable RemoteError | Select-Object * -ExcludeProperty RunspaceId, PSshowcomputername
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     if ($results) {
 
-        $results = $results | sort -property pscomputername
+        $results = $results | Sort-Object -property pscomputername
 
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -title $str_title_var
@@ -707,7 +709,7 @@ function Get-CurrentUser {
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             }
-         
+
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
                 $params = @{
@@ -729,7 +731,7 @@ function Get-CurrentUser {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            
+
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -762,7 +764,7 @@ function Get-InstalledDotNetversions {
         Target computer or computers of the function.
         Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
+        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER OutputFile
@@ -805,7 +807,7 @@ function Get-InstalledDotNetversions {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    }    
+    }
 
 
     $str_title_var = "InstalledDotNet"
@@ -819,10 +821,10 @@ function Get-InstalledDotNetversions {
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
         Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse | `
-            Get-ItemProperty -Name version -EA 0 | Where { $_.PSChildName -Match '^(?!S)\p{L}' } |`
-            Select PSChildName, version
+            Get-ItemProperty -Name version -EA 0 | Where-Object { $_.PSChildName -Match '^(Where-Object !S)\p{L}' } |`
+            Select-Object PSChildName, version
 
-    } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+    } -ErrorVariable RemoteError | Select-Object * -ExcludeProperty RunspaceId, PSshowcomputername
 
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
@@ -833,7 +835,7 @@ function Get-InstalledDotNetversions {
         # }
 
 
-        $results = $results | sort -property pscomputername
+        $results = $results | Sort-Object -property pscomputername
 
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title "Installed .NET Versions"
@@ -845,7 +847,7 @@ function Get-InstalledDotNetversions {
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             }
-           
+
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
@@ -868,7 +870,7 @@ function Get-InstalledDotNetversions {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            
+
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -904,7 +906,7 @@ Function Get-IntuneHardwareIDs {
         Target computer or computers of the function.
         Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
+        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER DeviceGroupTag
@@ -952,9 +954,8 @@ Function Get-IntuneHardwareIDs {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    }    
+    }
 
-    $str_title_var = "IntuneHardwareIDs"
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
     }
@@ -963,7 +964,7 @@ Function Get-IntuneHardwareIDs {
         $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
 
-    ## make sure there's a .csv on the end of output file?
+    ## make sure there's a .csv on the end of output fileWhere-Object
     if ($outputfile -notlike "*.csv") {
         $outputfile += ".csv"
     }
@@ -986,11 +987,9 @@ Function Get-IntuneHardwareIDs {
         GroupTag     = $DeviceGroupTag
         Append       = $true
     }
-    ## Attempt to use cmdlet from installing script from internet, if fails - revert to script in support 
+    ## Attempt to use cmdlet from installing script from internet, if fails - revert to script in support
     ## files (it should have to exist at this point).
-    $script_path = Get-InstalledScript -Name Get-WindowsAutoPilotInfo | Select -Exp InstalledLocation
-
-
+    $script_path = Get-InstalledScript -Name Get-WindowsAutoPilotInfo | Select-Object -Exp InstalledLocation
     &"$script_path\Get-WindowsAutoPilotInfo.ps1" @params
 
     ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
@@ -1018,7 +1017,7 @@ function Get-InventoryDetails {
         Target computer or computers of the function.
         Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
+        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER OutputFile
@@ -1062,7 +1061,7 @@ function Get-InventoryDetails {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    } 
+    }
     ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     ###
     ### *** INSERT THE TITLE OF YOUR FUNCTION / REPORT FOR $str_title_var ***
@@ -1077,14 +1076,14 @@ function Get-InventoryDetails {
     }
 
     $results = Invoke-Command -ComputerName $ComputerName -scriptblock {
-        $pc_asset_tag = Get-Ciminstance -class win32_systemenclosure | select -exp smbiosassettag
-        $pc_model = Get-Ciminstance -class win32_computersystem | select -exp model
-        $pc_serial = Get-Ciminstance -class Win32_SystemEnclosure | select -exp serialnumber
-        $pc_manufacturer = Get-Ciminstance -class Win32_ComputerSystem | select -exp manufacturer
-        $monitors = Get-CimInstance WmiMonitorId -Namespace root\wmi | Select SerialNumberID, ManufacturerName, UserFriendlyName
-        $monitors | % { 
+        $pc_asset_tag = Get-Ciminstance -class win32_systemenclosure | Select-Object -exp smbiosassettag
+        $pc_model = Get-Ciminstance -class win32_computersystem | Select-Object -exp model
+        $pc_serial = Get-Ciminstance -class Win32_SystemEnclosure | Select-Object -exp serialnumber
+        $pc_manufacturer = Get-Ciminstance -class Win32_ComputerSystem | Select-Object -exp manufacturer
+        $monitors = Get-CimInstance WmiMonitorId -Namespace root\wmi | Select-Object SerialNumberID, ManufacturerName, UserFriendlyName
+        $monitors | ForEach-Object {
             # $_.serialnumberid = [System.Text.Encoding]::ASCII.GetString($_.SerialNumberID -notmatch 0)
-            # 
+            #
             $_.UserFriendlyName = [System.Text.Encoding]::ASCII.GetString($_.UserFriendlyName)
             if ($_.UserFriendlyName -like "*P19*") {
                 $_.serialnumberid = $(([System.Text.Encoding]::ASCII.GetString($_.SerialNumberID -notmatch 0)).Trim())
@@ -1093,12 +1092,12 @@ function Get-InventoryDetails {
                 ## from copilot: his will replace any character that is not in the range from hex 20 (space) to hex 7E (tilde), which includes all printable ASCII characters, with nothing.
                 $_.serialnumberid = ($([System.Text.Encoding]::ASCII.GetString($_.SerialNumberID ).Trim()) -replace '[^\x20-\x7E]', '')
             }
-                
+
             $_.ManufacturerName = [System.Text.Encoding]::ASCII.GetString($_.ManufacturerName)
         }
-            
+
         $obj = [pscustomobject]@{
-                
+
             computer_asset        = $pc_asset_tag
             computer_location     = $(($env:COMPUTERNAME -split '-')[1]) ## at least make an attempt to get location.
             computer_model        = $pc_model
@@ -1112,16 +1111,16 @@ function Get-InventoryDetails {
         # Write-Host "Gathered details from $env:COMPUTERNAME"
         # Write-Host "$obj"
         $obj
-    } -ErrorVariable RemoteError | Select * -ExcludeProperty PSShowComputerName, RunspaceId
+    } -ErrorVariable RemoteError | Select-Object * -ExcludeProperty PSShowComputerName, RunspaceId
 
-    $not_inventoried = $ComputerName | ? { $_ -notin $results.pscomputername }
-    $not_inventoried += $RemoteError.CategoryInfo.TargetName | ? { $_ -notin $not_inventoried }
+    $not_inventoried = $ComputerName | Where-Object { $_ -notin $results.pscomputername }
+    $not_inventoried += $RemoteError.CategoryInfo.TargetName | Where-Object { $_ -notin $not_inventoried }
 
     ## This section will attempt to output a CSV and XLSX report if anything other than 'n' was used for $Outputfile.
     ## If $Outputfile = 'n', results will be displayed in a gridview, with title set to $str_title_var.
     if ($results) {
 
-        $results = $results | sort -property pscomputername
+        $results = $results | Sort-Object -property pscomputername
 
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -title $str_title_var
@@ -1151,8 +1150,8 @@ function Get-InventoryDetails {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            
-            
+
+
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -1198,7 +1197,7 @@ function Ping-TestReport {
 
     .EXAMPLE
         Ping-TestReport -Targetcomputer "g-client-" -PingCount 10 -Outputfile "GClientPings"
-    
+
     .EXAMPLE
         Ping-TestReport -Targetcomputer "g-client-" -PingCount 2
 
@@ -1207,12 +1206,12 @@ function Ping-TestReport {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
-    
+
     param (
         [Parameter(
             Mandatory = $true
         )]
-        $ComputerName,    
+        $ComputerName,
         $PingCount,
         [string]$Outputfile = ''
     )
@@ -1240,12 +1239,12 @@ function Ping-TestReport {
 
         if ($single_computer) {
 
-            ## check if network path exists first - that way we don't waste time pinging machine thats offline?
+            ## check if network path exists first - that way we don't waste time pinging machine thats offlineWhere-Object
             if (-not ([System.IO.Directory]::Exists("\\$single_computer\c$"))) {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not online." -foregroundcolor red
                 continue
             }
-            
+
             ## Create object to store results of ping test on single machine
             $obj = [pscustomobject]@{
                 Sourcecomputer       = $env:COMPUTERNAME
@@ -1279,7 +1278,7 @@ function Ping-TestReport {
 
     if ($results) {
 
-        $results = $results | sort -property pscomputername
+        $results = $results | Sort-Object -property pscomputername
 
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview
@@ -1309,7 +1308,7 @@ function Ping-TestReport {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            
+
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
             try {
                 Invoke-item "$($outputfile | split-path -Parent)"
@@ -1342,17 +1341,17 @@ function Scan-ForAppOrFilePath {
         First section of a hostname to generate a list, ex: t-pc-0 will create a list of all hostnames that start with t-pc-0. (Possibly t-pc-01, t-pc-02, t-pc-03, etc.)
 
     .PARAMETER Item
-        The item to search for. 
-        If the -SearchType 'app' argument is used, this should be the application's DisplayName. 
+        The item to search for.
+        If the -SearchType 'app' argument is used, this should be the application's DisplayName.
         If the -SearchType 'path' argument is used, this should be the path to search for, Ex: C:\users\public\test.txt.
 
     .PARAMETER OutputFile
         Used to create the output filename/path if supplied.
 
     .PARAMETER SearchType
-        The type of search to perform. 
-        This can be either 'app' or 'path'. 
-        If 'app' is specified, the script will search for the specified application in the registry. 
+        The type of search to perform.
+        This can be either 'app' or 'path'.
+        If 'app' is specified, the script will search for the specified application in the registry.
         If 'path' is specified, the script will search for the specified file/folder path on the target's filesystem.
 
     .PARAMETER SendPings
@@ -1367,7 +1366,7 @@ function Scan-ForAppOrFilePath {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
-    
+
     param (
         [Parameter(
             Mandatory = $true
@@ -1389,8 +1388,8 @@ function Scan-ForAppOrFilePath {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    } 
-        
+    }
+
 
     ## Outputfile handling - either create default, create filenames using input - report files are mandatory in this function.
     $str_title_var = "item-scan"
@@ -1401,7 +1400,7 @@ function Scan-ForAppOrFilePath {
         #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
         $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
-        
+
     # if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
     if ($Path) {
 
@@ -1418,7 +1417,7 @@ function Scan-ForAppOrFilePath {
             }
             $GetSpecifiedItem = Get-Item -Path "$using:item" -ErrorAction SilentlyContinue
             if ($GetSpecifiedItem.Exists) {
-                $details = $GetSpecifiedItem | Select FullName, *Time, Attributes, Length
+                $details = $GetSpecifiedItem | Select-Object FullName, *Time, Attributes, Length
                 $obj.PathPresent = $true
                 if ($GetSpecifiedItem.PSIsContainer) {
                     $obj.PathType = 'Folder'
@@ -1435,8 +1434,8 @@ function Scan-ForAppOrFilePath {
                 $obj.PathPresent = "Filepath not found"
             }
             $obj
-        } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
-    
+        } -ErrorVariable RemoteError | Select-Object * -ExcludeProperty RunspaceId, PSshowcomputername
+
     }
     ## Application search
     # elseif ($SearchType -eq 'App') {
@@ -1495,16 +1494,16 @@ function Scan-ForAppOrFilePath {
             #     }
             #     $obj
             # }
-        } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+        } -ErrorVariable RemoteError | Select-Object * -ExcludeProperty RunspaceId, PSshowcomputername
     }
 
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
- 
+
     if ($results) {
         $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
         "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-        $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append      
+        $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
         ## Try ImportExcel
         if (Get-Module -ListAvailable -Name ImportExcel) {
             Import-Module ImportExcel
@@ -1527,7 +1526,7 @@ function Scan-ForAppOrFilePath {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
         }
-        
+
         ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
         try {
             Invoke-item "$($outputfile | split-path -Parent)"
@@ -1536,7 +1535,7 @@ function Scan-ForAppOrFilePath {
             # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
             Invoke-item "$outputfile.csv"
         }
-            
+
     }
     else {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
@@ -1557,7 +1556,7 @@ function Scan-SoftwareInventory {
         Target computer or computers of the function.
         Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
+        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER Outputfile
@@ -1579,7 +1578,7 @@ function Scan-SoftwareInventory {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
-    
+
     param (
         [Parameter(
             Mandatory = $true
@@ -1603,7 +1602,7 @@ function Scan-SoftwareInventory {
 
     if ($SendPings) {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
-    }        
+    }
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
@@ -1612,7 +1611,7 @@ function Scan-SoftwareInventory {
         #$OutputFile = GetOutputFileString -TitleString $outputfile -Rootdirectory (Get-Location).Path -FolderTitle $outputfile -ReportOutput
         $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile
     }
-        
+
     $results = invoke-command -computername $ComputerName -scriptblock {
 
         $targetapps = ($using:AppsToLookFor)
@@ -1645,7 +1644,7 @@ function Scan-SoftwareInventory {
                     if ($targetapps) {
                         $matched_app = $false
 
-                        $targetapps | % {
+                        $targetapps | ForEach-Object {
                             if ($displayname -like "*$_*") {
                                 $matched_app = $true
                             }
@@ -1673,17 +1672,17 @@ function Scan-SoftwareInventory {
                         InstallDate     = $installdate
                         ApplicationSize = $application_size
                     }
-                    $obj    
-                }        
+                    $obj
+                }
             }
-        } 
-    } -ErrorVariable RemoteError | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+        }
+    } -ErrorVariable RemoteError | Select-Object * -ExcludeProperty RunspaceId, PSshowcomputername
 
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     ## Outputs results
     if ($results) {
-        $unique_hostnames = $($results.pscomputername) | select -Unique
+        $unique_hostnames = $($results.pscomputername) | Select-Object -Unique
 
         if ($errored_machines) {
             Write-Host "These machines errored out during Invoke-Command." -ForegroundColor Red
@@ -1716,7 +1715,7 @@ function Scan-SoftwareInventory {
                 $ws.View.ShowGridLines = $false
                 Close-ExcelPackage $xlsx
             }
-                
+
         }
         ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
         try {
@@ -1724,7 +1723,7 @@ function Scan-SoftwareInventory {
         }
         catch {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder, attempting to open first .csv in list." -Foregroundcolor Yellow
-            Invoke-item "$outputfile-$($unique_hostnames | select -first 1).csv"
+            Invoke-item "$outputfile-$($unique_hostnames | Select-Object -first 1).csv"
         }
     }
 
@@ -1757,7 +1756,7 @@ function Test-ConnectivityQuick {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
-    
+
     param(
         [Parameter(
             Mandatory = $true
@@ -1792,7 +1791,7 @@ function Test-ConnectivityQuick {
             else {
                 $ComputerName = @($ComputerName)
             }
-        
+
             ## B. LDAP query each TargetComputer item, create new list / sets back to Targetcomputer when done.
             $NewTargetComputer = [System.Collections.Arraylist]::new()
             foreach ($computer in $ComputerName) {
@@ -1802,12 +1801,12 @@ function Test-ConnectivityQuick {
                     Write-Warning "You can override your AD Domain in the `$overrideUserDnsDomain variable"
                 }
                 else {
-        
+
                     # if no domain specified fallback to PowerShell environment variable
                     if ([string]::IsNullOrEmpty($searchRoot)) {
                         $searchRoot = $env:USERDNSDOMAIN
                     }
-                        
+
                     $matching_hostnames = (([adsisearcher]"(&(objectCategory=Computer)(name=$computer*))").findall()).properties
                     $matching_hostnames = $matching_hostnames.name
                     $NewTargetComputer += $matching_hostnames
@@ -1815,7 +1814,7 @@ function Test-ConnectivityQuick {
             }
             $ComputerName = $NewTargetComputer
         }
-        $ComputerName = $ComputerName | Where-object { $_ -ne $null } | Select -Unique
+        $ComputerName = $ComputerName | Where-object { $_ -ne $null } | Select-Object -Unique
         # Safety catch
         if ($null -eq $ComputerName) {
             return
@@ -1853,7 +1852,7 @@ function Test-ConnectivityQuick {
 
             $results.add($ping_response_obj) | Out-Null
         }
-    
+
     }
     ## Open results in gridview since this is just supposed to be quick test for connectivity
     $results | out-gridview -Title "Results: $PingCount Pings"
