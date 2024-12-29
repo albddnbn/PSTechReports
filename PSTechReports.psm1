@@ -1666,7 +1666,6 @@ function Count-TempProfiles {
                             FolderCount = 1
                         }
                         $temp_profile
-                        read-host "enter"
                         $results.Add($temp_profile) | Out-Null
                         Write-Host "Added new entry for $username and $single_computer."
                     }
