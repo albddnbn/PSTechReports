@@ -77,36 +77,27 @@ function getoutputstring {
         [string]$TitleString
     )
 
-    ForEach ($file_ext in @('.csv', '.xlsx', '.ps1', '.exe')) {
-        $TitleString = $TitleString -replace $file_ext, ''
-    }
+    # ForEach ($file_ext in @('.csv', '.xlsx', '.ps1', '.exe')) {
+    #     $TitleString = $TitleString -replace $file_ext, ''
+    # }
 
     $thedate = Get-Date -Format 'yyyy-MM-dd'
 
-    $full_path = "$RootDirectory\$thedate\$TitleString"
+    $full_path = Join-Path "$RootDirectory" "$thedate"
 
-    if (-not (Test-Path $RootDirectory\$thedate)) {
-        New-Item -Path "$RootDirectory\$thedate" -itemtype 'directory'
+    if (-not (Test-Path $full_path -erroraction SilentlyContinue)) {
+        New-Item -Path $full_path -ItemType Directory
+    }
+    
+    $full_path = Join-Path "$full_path" "$TitleString"
+
+    while ((Test-Path "$full_path.csv" -ErrorAction SilentlyContinue) -or (Test-Path "$full_path.xlsx" -Erroraction silentlycontinue)) {
+        $TitleString = Read-host "Please enter a new title for the output file."
+        $full_path = Join-Path "$RootDirectory" "$thedate"
+        $full_path = Join-Path "$full_path" "$TitleString"
     }
 
-    $append = 0
-
-    while ($true) {
-        if ((Test-Path "$full_path.csv" -erroraction silentlycontinue) -or (Test-Path "$full_path.xlsx" -erroraction silentlycontinue)) {
-            Write-Host "Tested path - $full_path - creating new" -foregroundcolor yellow
-            if ($append -ne 0) {
-                $TitleString = $TitleString -replace ".{2}$"
-            }
-            $TitleString = "$TitleString-$append"
-            $full_path = "$RootDirectory\$thedate\$TitleString"
-            $append++
-        }
-        else {
-            break
-        }
-    }
-
-    return ($full_path | Select -first 1)
+    return $full_path
 
 }
 
@@ -213,14 +204,14 @@ function Get-AssetInformation {
     }
 
 
-    $str_title_var = "AssetInfo"
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # $str_title_var = "AssetInfo"
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
 
-    }
+    # }
 
 
     ## Asset info scriptblock used to get local asset info from each target computer.
@@ -288,7 +279,7 @@ function Get-AssetInformation {
         }
         else {
             $outputfile = $outputfile | Select-Object -first 1
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -297,26 +288,34 @@ function Get-AssetInformation {
 
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-                $params = @{
-                    AutoSize             = $true
-                    TitleBackgroundColor = 'Blue'
-                    TableName            = $str_title_var
-                    TableStyle           = 'Medium9'
-                    BoldTopRow           = $true
-                    WorksheetName        = $str_title_var
-                    PassThru             = $true
-                    Path                 = "$Outputfile.xlsx"
-                }
-                $Content = Import-Csv "$Outputfile.csv"
-                $xlsx = $Content | Export-Excel @params
-                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false
-                Close-ExcelPackage $xlsx
+                # $params = @{
+                #     AutoSize             = $true
+                #     TitleBackgroundColor = 'Blue'
+                #     TableName            = $str_title_var
+                #     TableStyle           = 'Medium9'
+                #     BoldTopRow           = $true
+                #     WorksheetName        = $str_title_var
+                #     PassThru             = $true
+                #     Path                 = "$Outputfile.xlsx"
+                # }
+                # $Content = Import-Csv "$Outputfile.csv"
+                # $xlsx = $Content | Export-Excel @params
+                # $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                # $ws.View.ShowGridLines = $false
+                # Close-ExcelPackage $xlsx
+                Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
+
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            Invoke-item "$($outputfile | split-path -Parent)"
+
+            # try {
+            #     Invoke-item "$($outputfile | split-path -Parent)"
+            # }
+            # catch {
+            Invoke-Item "$outputfile.csv"
+            # }
         }
     }
     else {
@@ -383,12 +382,12 @@ function Get-ComputerDetails {
     }
 
     $str_title_var = "PCdetails"
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
         # Gets active user, computer manufacturer, model, BIOS version & release date, Win Build number, total RAM, last boot time, and total system up time.
@@ -431,33 +430,34 @@ function Get-ComputerDetails {
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-                $params = @{
-                    AutoSize             = $true
-                    TitleBackgroundColor = 'Blue'
-                    TableName            = $str_title_var
-                    TableStyle           = 'Medium9'
-                    BoldTopRow           = $true
-                    WorksheetName        = $str_title_var
-                    PassThru             = $true
-                    Path                 = "$Outputfile.xlsx"
-                }
-                $Content = Import-Csv "$Outputfile.csv"
-                $xlsx = $Content | Export-Excel @params
-                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false
-                Close-ExcelPackage $xlsx
+                # $params = @{
+                #     AutoSize             = $true
+                #     TitleBackgroundColor = 'Blue'
+                #     TableName            = $str_title_var
+                #     TableStyle           = 'Medium9'
+                #     BoldTopRow           = $true
+                #     WorksheetName        = $str_title_var
+                #     PassThru             = $true
+                #     Path                 = "$Outputfile.xlsx"
+                # }
+                # $Content = Import-Csv "$Outputfile.csv"
+                # $xlsx = $Content | Export-Excel @params
+                # $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                # $ws.View.ShowGridLines = $false
+                # Close-ExcelPackage $xlsx
+                Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
 
-            try {
-                Invoke-item "$($outputfile | split-path -Parent)"
-            }
-            catch {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
-                Invoke-item "$outputfile.csv"
-            }
+            # try {
+            #     Invoke-item "$($outputfile | split-path -Parent)"
+            # }
+            # catch {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+            Invoke-item "$outputfile.csv"
+            # }
         }
     }
     else {
@@ -521,12 +521,12 @@ function Get-ConnectedPrinters {
     }
 
     $str_title_var = "Printers"
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     ## Scriptblock - lists connected/default printers
     $list_local_printers_block = {
@@ -561,7 +561,7 @@ function Get-ConnectedPrinters {
             $results | out-gridview -Title $str_title_var
         }
         else {
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -570,34 +570,36 @@ function Get-ConnectedPrinters {
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-                $params = @{
-                    AutoSize             = $true
-                    TitleBackgroundColor = 'Blue'
-                    TableName            = $str_title_var
-                    TableStyle           = 'Medium9'
-                    BoldTopRow           = $true
-                    WorksheetName        = $str_title_var
-                    PassThru             = $true
-                    Path                 = "$Outputfile.xlsx"
-                }
-                $Content = Import-Csv "$Outputfile.csv"
-                $xlsx = $Content | Export-Excel @params
-                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false
-                Close-ExcelPackage $xlsx
+                # $params = @{
+                #     AutoSize             = $true
+                #     TitleBackgroundColor = 'Blue'
+                #     TableName            = $str_title_var
+                #     TableStyle           = 'Medium9'
+                #     BoldTopRow           = $true
+                #     WorksheetName        = $str_title_var
+                #     PassThru             = $true
+                #     Path                 = "$Outputfile.xlsx"
+                # }
+                # $Content = Import-Csv "$Outputfile.csv"
+                # $xlsx = $Content | Export-Excel @params
+                # $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                # $ws.View.ShowGridLines = $false
+                # Close-ExcelPackage $xlsx
+                Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
+
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
 
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
-            try {
-                Invoke-item "$($outputfile | split-path -Parent)"
-            }
-            catch {
+            # try {
+            #     Invoke-item "$($outputfile | split-path -Parent)"
+            # }
+            # catch {
 
-                Invoke-item "$outputfile.csv"
-            }
+            Invoke-item "$outputfile.csv"
+            # }
         }
     }
     else {
@@ -672,12 +674,12 @@ function Get-CurrentUser {
 
 
     $str_title_var = "CurrentUsers"
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
         $obj = [PSCustomObject]@{
@@ -701,7 +703,7 @@ function Get-CurrentUser {
         }
         else {
 
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -709,34 +711,36 @@ function Get-CurrentUser {
 
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-                $params = @{
-                    AutoSize             = $true
-                    TitleBackgroundColor = 'Blue'
-                    TableName            = $str_title_var
-                    TableStyle           = 'Medium9'
-                    BoldTopRow           = $true
-                    WorksheetName        = $str_title_var
-                    PassThru             = $true
-                    Path                 = "$Outputfile.xlsx"
-                }
-                $Content = Import-Csv "$Outputfile.csv"
-                $xlsx = $Content | Export-Excel @params
-                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false
-                Close-ExcelPackage $xlsx
+                # $params = @{
+                #     AutoSize             = $true
+                #     TitleBackgroundColor = 'Blue'
+                #     TableName            = $str_title_var
+                #     TableStyle           = 'Medium9'
+                #     BoldTopRow           = $true
+                #     WorksheetName        = $str_title_var
+                #     PassThru             = $true
+                #     Path                 = "$Outputfile.xlsx"
+                # }
+                # $Content = Import-Csv "$Outputfile.csv"
+                # $xlsx = $Content | Export-Excel @params
+                # $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                # $ws.View.ShowGridLines = $false
+                # Close-ExcelPackage $xlsx
+                Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
+
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
 
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
-            try {
-                Invoke-item "$($outputfile | split-path -Parent)"
-            }
-            catch {
+            # try {
+            #     Invoke-item "$($outputfile | split-path -Parent)"
+            # }
+            # catch {
 
-                Invoke-item "$outputfile.csv"
-            }
+            Invoke-item "$outputfile.csv"
+            # }
         }
     }
     else {
@@ -808,12 +812,12 @@ function Get-InstalledDotNetversions {
 
 
     $str_title_var = "InstalledDotNet"
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     $results = Invoke-Command -ComputerName $ComputerName -Scriptblock {
         Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse | `
@@ -838,7 +842,7 @@ function Get-InstalledDotNetversions {
         }
         else {
 
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
             if ($errored_machines) {
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -847,34 +851,35 @@ function Get-InstalledDotNetversions {
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-                $params = @{
-                    AutoSize             = $true
-                    TitleBackgroundColor = 'Blue'
-                    TableName            = $str_title_var
-                    TableStyle           = 'Medium9'
-                    BoldTopRow           = $true
-                    WorksheetName        = $str_title_var
-                    PassThru             = $true
-                    Path                 = "$Outputfile.xlsx"
-                }
-                $Content = Import-Csv "$Outputfile.csv"
-                $xlsx = $Content | Export-Excel @params
-                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false
-                Close-ExcelPackage $xlsx
+                # $params = @{
+                #     AutoSize             = $true
+                #     TitleBackgroundColor = 'Blue'
+                #     TableName            = $str_title_var
+                #     TableStyle           = 'Medium9'
+                #     BoldTopRow           = $true
+                #     WorksheetName        = $str_title_var
+                #     PassThru             = $true
+                #     Path                 = "$Outputfile.xlsx"
+                # }
+                # $Content = Import-Csv "$Outputfile.csv"
+                # $xlsx = $Content | Export-Excel @params
+                # $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                # $ws.View.ShowGridLines = $false
+                # Close-ExcelPackage $xlsx
+                Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
 
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
-            try {
-                Invoke-item "$($outputfile | split-path -Parent)"
-            }
-            catch {
+            # try {
+            #     Invoke-item "$($outputfile | split-path -Parent)"
+            # }
+            # catch {
 
-                Invoke-item "$outputfile.csv"
-            }
+            Invoke-item "$outputfile.csv"
+            # }
         }
     }
     else {
@@ -952,12 +957,12 @@ Function Get-IntuneHardwareIDs {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }
 
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     ## make sure there's a .csv on the end of output fileWhere-Object
     if ($outputfile -notlike "*.csv") {
@@ -1062,12 +1067,12 @@ function Get-InventoryDetails {
     ### *** INSERT THE TITLE OF YOUR FUNCTION / REPORT FOR $str_title_var ***
     ###
     $str_title_var = "Inventory"
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     $results = Invoke-Command -ComputerName $ComputerName -scriptblock {
         $pc_asset_tag = Get-Ciminstance -class win32_systemenclosure | Select-Object -exp smbiosassettag
@@ -1121,25 +1126,26 @@ function Get-InventoryDetails {
         }
         else {
 
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-                $params = @{
-                    AutoSize             = $true
-                    TitleBackgroundColor = 'Blue'
-                    TableName            = $str_title_var
-                    TableStyle           = 'Medium9'
-                    BoldTopRow           = $true
-                    WorksheetName        = $str_title_var
-                    PassThru             = $true
-                    Path                 = "$Outputfile.xlsx"
-                }
-                $Content = Import-Csv "$Outputfile.csv"
-                $xlsx = $Content | Export-Excel @params
-                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false
-                Close-ExcelPackage $xlsx
+                # $params = @{
+                #     AutoSize             = $true
+                #     TitleBackgroundColor = 'Blue'
+                #     TableName            = $str_title_var
+                #     TableStyle           = 'Medium9'
+                #     BoldTopRow           = $true
+                #     WorksheetName        = $str_title_var
+                #     PassThru             = $true
+                #     Path                 = "$Outputfile.xlsx"
+                # }
+                # $Content = Import-Csv "$Outputfile.csv"
+                # $xlsx = $Content | Export-Excel @params
+                # $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                # $ws.View.ShowGridLines = $false
+                # Close-ExcelPackage $xlsx
+                Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
@@ -1147,13 +1153,13 @@ function Get-InventoryDetails {
 
 
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
-            try {
-                Invoke-item "$($outputfile | split-path -Parent)"
-            }
-            catch {
+            # try {
+            #     Invoke-item "$($outputfile | split-path -Parent)"
+            # }
+            # catch {
 
-                Invoke-item "$outputfile.csv"
-            }
+            Invoke-item "$outputfile.csv"
+            # }
         }
     }
     else {
@@ -1215,12 +1221,12 @@ function Ping-TestReport {
     $am_pm = (Get-Date).ToString('tt')
 
     $str_title_var = "Pings-$Outputfile-$(Get-Date -Format 'hh-MM')$($am_pm)"
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     ## Create arraylist to store results
     $results = [system.collections.arraylist]::new()
@@ -1278,38 +1284,39 @@ function Ping-TestReport {
         }
         else {
 
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
                 Import-Module ImportExcel
-                $params = @{
-                    AutoSize             = $true
-                    TitleBackgroundColor = 'Blue'
-                    TableName            = $str_title_var
-                    TableStyle           = 'Medium9'
-                    BoldTopRow           = $true
-                    WorksheetName        = $str_title_var
-                    PassThru             = $true
-                    Path                 = "$Outputfile.xlsx"
-                }
-                $Content = Import-Csv "$Outputfile.csv"
-                $xlsx = $Content | Export-Excel @params
-                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false
-                Close-ExcelPackage $xlsx
+                # $params = @{
+                #     AutoSize             = $true
+                #     TitleBackgroundColor = 'Blue'
+                #     TableName            = $str_title_var
+                #     TableStyle           = 'Medium9'
+                #     BoldTopRow           = $true
+                #     WorksheetName        = $str_title_var
+                #     PassThru             = $true
+                #     Path                 = "$Outputfile.xlsx"
+                # }
+                # $Content = Import-Csv "$Outputfile.csv"
+                # $xlsx = $Content | Export-Excel @params
+                # $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                # $ws.View.ShowGridLines = $false
+                # Close-ExcelPackage $xlsx
+                Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
 
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
-            try {
-                Invoke-item "$($outputfile | split-path -Parent)"
-            }
-            catch {
+            # try {
+            #     Invoke-item "$($outputfile | split-path -Parent)"
+            # }
+            # catch {
 
-                Invoke-item "$outputfile.csv"
-            }
+            Invoke-item "$outputfile.csv"
+            # }
         }
     }
     else {
@@ -1386,12 +1393,12 @@ function Scan-ForAppOrFilePath {
 
     ## Outputfile handling - either create default, create filenames using input - report files are mandatory in this function.
     $str_title_var = "item-scan"
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     # if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
     if ($Path) {
@@ -1499,34 +1506,36 @@ function Scan-ForAppOrFilePath {
         ## Try ImportExcel
         if (Get-Module -ListAvailable -Name ImportExcel) {
             Import-Module ImportExcel
-            $params = @{
-                AutoSize             = $true
-                TitleBackgroundColor = 'Blue'
-                TableName            = $str_title_var
-                TableStyle           = 'Medium9'
-                BoldTopRow           = $true
-                WorksheetName        = $str_title_var
-                PassThru             = $true
-                Path                 = "$Outputfile.xlsx"
-            }
-            $Content = Import-Csv "$Outputfile.csv"
-            $xlsx = $Content | Export-Excel @params
-            $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-            $ws.View.ShowGridLines = $false
-            Close-ExcelPackage $xlsx
+            # $params = @{
+            #     AutoSize             = $true
+            #     TitleBackgroundColor = 'Blue'
+            #     TableName            = $str_title_var
+            #     TableStyle           = 'Medium9'
+            #     BoldTopRow           = $true
+            #     WorksheetName        = $str_title_var
+            #     PassThru             = $true
+            #     Path                 = "$Outputfile.xlsx"
+            # }
+            # $Content = Import-Csv "$Outputfile.csv"
+            # $xlsx = $Content | Export-Excel @params
+            # $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+            # $ws.View.ShowGridLines = $false
+            # Close-ExcelPackage $xlsx
+            Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
+
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
         }
 
         ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
-        try {
-            Invoke-item "$($outputfile | split-path -Parent)"
-        }
-        catch {
-            # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
-            Invoke-item "$outputfile.csv"
-        }
+        # try {
+        #     Invoke-item "$($outputfile | split-path -Parent)"
+        # }
+        # catch {
+        # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+        Invoke-item "$outputfile.csv"
+        # }
 
     }
     else {
@@ -1596,12 +1605,12 @@ function Scan-SoftwareInventory {
         $ComputerName = TestConnectivity -ComputerName $ComputerName
     }
     ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-    if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    }
-    else {
-        $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
-    }
+    # if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    # }
+    # else {
+    #     $OutputFile = getoutputstring -RootDirectory (Get-Location).Path -TitleString $outputfile | Select -First 1
+    # }
 
     $results = invoke-command -computername $ComputerName -scriptblock {
 
@@ -1689,23 +1698,25 @@ function Scan-SoftwareInventory {
 
             $apps | Export-Csv -Path "$outputfile-$single_computer_name.csv" -NoTypeInformation
             ## Try ImportExcel
-            if (Get-Module ImportExcel -ListAvailable) {
-                $params = @{
-                    AutoSize             = $true
-                    TitleBackgroundColor = 'Blue'
-                    TableName            = "$outputfile"
-                    TableStyle           = 'Medium9'
-                    BoldTopRow           = $true
-                    WorksheetName        = "$single_computer_name Apps"
-                    PassThru             = $true
-                    Path                 = "$Outputfile.xlsx"
-                }
-                $Content = Import-Csv "$outputfile-$single_computer_name.csv"
-                $xlsx = $Content | Export-Excel @params
-                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                $ws.View.ShowGridLines = $false
-                Close-ExcelPackage $xlsx
-            }
+            # if (Get-Module ImportExcel -ListAvailable) {
+            #     $params = @{
+            #         AutoSize             = $true
+            #         TitleBackgroundColor = 'Blue'
+            #         TableName            = "$outputfile"
+            #         TableStyle           = 'Medium9'
+            #         BoldTopRow           = $true
+            #         WorksheetName        = "$single_computer_name Apps"
+            #         PassThru             = $true
+            #         Path                 = "$Outputfile.xlsx"
+            #     }
+            #     $Content = Import-Csv "$outputfile-$single_computer_name.csv"
+            #     $xlsx = $Content | Export-Excel @params
+            #     $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+            #     $ws.View.ShowGridLines = $false
+            #     Close-ExcelPackage $xlsx
+            # }
+            Import-CSV "$outputfile-$single_computer_name.csv" | Export-Excel -Path "$outputfile-$single_computer_name.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
+
 
         }
         ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
