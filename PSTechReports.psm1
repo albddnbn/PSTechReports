@@ -23,7 +23,7 @@
         GetTargets -TargetComputer "D:\computers.txt"
     #>
     param(
-        [String[]]$TargetComputer
+        $TargetComputer
     )
 
     if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
@@ -31,6 +31,9 @@
     }
     elseif ($(Test-Path $Targetcomputer -erroraction SilentlyContinue) -and ($TargetComputer.count -eq 1)) {
         $TargetComputer = Get-Content $TargetComputer
+    }
+    elseif ($TargetComputer.gettype().name -eq 'Array') {
+        $TargetComputer = $TargetComputer
     }
 
     else {
