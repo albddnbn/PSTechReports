@@ -32,7 +32,7 @@
     elseif ($(Test-Path $Targetcomputer -erroraction SilentlyContinue) -and ($TargetComputer.count -eq 1)) {
         $TargetComputer = Get-Content $TargetComputer
     }
-    elseif ($TargetComputer.gettype().name -eq 'Array') {
+    elseif ($TargetComputer.gettype().basetype.name -eq 'Array') {
         $TargetComputer = $TargetComputer
     }
 
@@ -1584,7 +1584,7 @@ function Test-ConnectivityQuick {
     $results | out-gridview -Title "Results: $PingCount Pings"
 }
 
-function Count-TempProfiles {
+function Get-TempProfiles {
     <#
     .SYNOPSIS
         Generates reports showing number of temporary folders found for a user, on each computer.
