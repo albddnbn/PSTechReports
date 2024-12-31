@@ -32,9 +32,9 @@
     elseif ($(Test-Path $Targetcomputer -erroraction SilentlyContinue) -and ($TargetComputer.count -eq 1)) {
         $TargetComputer = Get-Content $TargetComputer
     }
-    elseif ($TargetComputer.gettype().basetype.name -eq 'Array') {
-        $TargetComputer = $TargetComputer
-    }
+    # elseif ($TargetComputer.gettype().basetype.name -eq 'Array') {
+    #     $TargetComputer = $TargetComputer
+    # }
 
     else {
         if ($Targetcomputer -like "*,*") {
