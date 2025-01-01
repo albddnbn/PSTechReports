@@ -32,9 +32,9 @@
     elseif ($(Test-Path $Targetcomputer -erroraction SilentlyContinue) -and ($TargetComputer.count -eq 1)) {
         $TargetComputer = Get-Content $TargetComputer
     }
-    # elseif ($TargetComputer.gettype().basetype.name -eq 'Array') {
-    #     $TargetComputer = $TargetComputer
-    # }
+    elseif ($TargetComputer.gettype().basetype.name -eq 'Array') {
+        $TargetComputer = $TargetComputer
+    }
 
     else {
         if ($Targetcomputer -like "*,*") {
@@ -108,12 +108,14 @@ function TestConnectivity {
 
     ## Ping target machines $PingCount times and log result to terminal.
     ForEach ($single_computer in $ComputerName) {
-        if (Test-Connection $single_computer -Count $PingCount -Quiet) {
-            Write-Host "$single_computer is online." -ForegroundColor Green
-            $online_results.Add($single_computer) | Out-Null
-        }
-        else {
-            Write-Host "$single_computer is offline." -ForegroundColor Red
+        if ($single_computer) {
+            if (Test-Connection $single_computer -Count $PingCount -Quiet) {
+                Write-Host "$single_computer is online." -ForegroundColor Green
+                $online_results.Add($single_computer) | Out-Null
+            }
+            else {
+                Write-Host "$single_computer is offline." -ForegroundColor Red
+            }
         }
     }
 
