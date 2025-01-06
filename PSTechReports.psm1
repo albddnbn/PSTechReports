@@ -1745,7 +1745,7 @@ function Copy-RemoteFiles {
         Path to file(s)/folder(s) to be grabbed from remote machines. Ex: 'C:\users\abuddenb\Desktop\test.txt'
 
     .PARAMETER SendPings
-        'true' will use the switch parameter, 'false' will not. Kind of acts like a boolean.
+        If used, will do a ping test for connectivity before attempting operations on target machines.
 
     .EXAMPLE
         Copy-RemoteFiles -TargetPath "Users\Public\Desktop" -OutputPath "C:\Users\Public\Desktop" -TargetComputer "t-client-"
@@ -1779,23 +1779,23 @@ function Copy-RemoteFiles {
             $target_network_path = $targetpath -replace 'C:', "\\$single_computer\c$"
             write-host "Checking $single_computer...$target_network_path"
 
-                if (Test-Path "$target_network_path" -erroraction SilentlyContinue) {
+            if (Test-Path "$target_network_path" -erroraction SilentlyContinue) {
 
                     
-                    # $target_session = New-PSSession $single_computer
+                # $target_session = New-PSSession $single_computer
 
-                    $target_filename = $targetpath | split-path -leaf
+                $target_filename = $targetpath | split-path -leaf
 
 
-                    Copy-Item -Path "$target_network_path" -Destination "$OutputFolder\$single_computer-$target_filename"  -Recurse
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $targetpath ($single_computer) to $OutputFolder\$single_computer-$target_filename  complete." -foregroundcolor green
+                Copy-Item -Path "$target_network_path" -Destination "$OutputFolder\$single_computer-$target_filename"  -Recurse
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $targetpath ($single_computer) to $OutputFolder\$single_computer-$target_filename  complete." -foregroundcolor green
                     
-                    # Remove-PSSession $target_session
+                # Remove-PSSession $target_session
 
-                }
-                else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $targetpath on $single_computer to $OutputFolder on local computer (remote item may not exist)." -foregroundcolor red
-                }
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $targetpath on $single_computer to $OutputFolder on local computer (remote item may not exist)." -foregroundcolor red
+            }
         }
     }
     ## Open output folder, pause.
@@ -1831,7 +1831,7 @@ function Send-Files {
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER SendPings
-        Switch parameter to test target machines for connectivity before performing operations.
+        If used, will do a ping test for connectivity before attempting operations on target machines.
 
     .EXAMPLE
         send-files -ComputerName test-client -sourcepath C:\test.txt -destinationpath C:\ -SendPings
