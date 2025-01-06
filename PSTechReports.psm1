@@ -144,7 +144,8 @@ function Get-AssetInformation {
         If 'n' is supplied, or Outputfile is not present in command, script will output findings to a gridview.
 
     .PARAMETER SendPings
-        Switch parameter to conduct ping test for connectivity before attempting main purpose of function.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .EXAMPLE
         Get-AssetInformation -ComputerName s-c127-01 -Outputfile C127-01-AssetInfo
@@ -281,8 +282,8 @@ function Get-ComputerDetails {
         If 'n' is supplied, or Outputfile is not present in command, script will output findings to a gridview.
 
     .PARAMETER SendPings
-        'y' = Ping test for connectivity before attempting main purpose of function.
-        Anything else - will not conduct the ping test.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .OUTPUTS
         [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, computer model, bios version/release date, last boot time, and other info.
@@ -398,8 +399,8 @@ function Get-ConnectedPrinters {
         If specified, the function will create a folder in the 'reports' directory with the specified substring in the title, appended to the $outputfile String (relates to the function title).
 
     .PARAMETER SendPings
-        'y' = Ping test for connectivity before attempting main purpose of function.
-        Anything else - will not conduct the ping test.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .OUTPUTS
         [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, logged in user, and list of connected printers.
@@ -509,8 +510,8 @@ function Get-CurrentUser {
         If 'n' is supplied, or Outputfile is not present in command, script will output findings to a gridview.
 
     .PARAMETER SendPings
-        'y' = Ping test for connectivity before attempting main purpose of function.
-        Anything else - will not conduct the ping test.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .OUTPUTS
         [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, logged in user, and whether the Teams/Zoom processes are running.
@@ -623,8 +624,8 @@ function Get-InstalledDotNetversions {
         If 'n' is supplied, or Outputfile is not present in command, script will output findings to a gridview.
 
     .PARAMETER SendPings
-        'y' = Ping test for connectivity before attempting main purpose of function.
-        Anything else - will not conduct the ping test.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .OUTPUTS
         [System.Collections.ArrayList] - Returns an arraylist of objects containing the hostname and info on installed .net versions.
@@ -808,8 +809,8 @@ Function Get-IntuneHardwareIDs {
         If 'n' is supplied, or Outputfile is not present in command, script will output findings to a gridview.
 
     .PARAMETER SendPings
-        'y' = Ping test for connectivity before attempting main purpose of function.
-        Anything else - will not conduct the ping test.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .OUTPUTS
         Outputs .csv file containing HWID information for target devices, to upload them into Intune.
@@ -897,8 +898,8 @@ function Get-InventoryDetails {
         If 'n' is supplied, or Outputfile is not present in command, script will output findings to a gridview.
 
     .PARAMETER SendPings
-        'y' = Ping test for connectivity before attempting main purpose of function.
-        Anything else - will not conduct the ping test.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .OUTPUTS
         [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, logged in user, and whether the Teams/Zoom processes are running.
@@ -1159,8 +1160,8 @@ function Scan-ForAppOrFilePath {
         If 'path' is specified, the script will search for the specified file/folder path on the target's filesystem.
 
     .PARAMETER SendPings
-        'y' = Ping test for connectivity before attempting main purpose of function.
-        Anything else - will not conduct the ping test.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .EXAMPLE
         Scan-ForAppOrFilePath ComputerName 't-client-01' -SearchType 'app' -Item 'Microsoft Teams' -outputfile 'teams'
@@ -1335,8 +1336,8 @@ function Scan-SoftwareInventory {
         Optional parameter to specify a list of applications/strings to look for. If not specified, all applications are scanned.
 
     .PARAMETER SendPings
-        'y' = Ping test for connectivity before attempting main purpose of function.
-        Anything else - will not conduct the ping test.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .EXAMPLE
         Scan-SoftwareInventory -ComputerName "t-client-28" -Title "tclient28-software"
@@ -1612,6 +1613,10 @@ function Get-TempProfiles {
     .PARAMETER TempFolderSuffix
         Suffix for temporary user folders. Default is "*.$env:USERDOMAIN*"
         Ex: C:\Users\Tsmith28.LLDC.000
+    
+    .PARAMETER SendPings
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .EXAMPLE
         Count-TempProfiles -TargetComputer 't-client-'
@@ -1745,7 +1750,8 @@ function Copy-RemoteFiles {
         Path to file(s)/folder(s) to be grabbed from remote machines. Ex: 'C:\users\abuddenb\Desktop\test.txt'
 
     .PARAMETER SendPings
-        If used, will do a ping test for connectivity before attempting operations on target machines.
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
 
     .EXAMPLE
         Copy the C:\test.txt file from target computers to C:\testgrab2 folder on local computer.
@@ -1835,8 +1841,9 @@ function Send-Files {
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER SendPings
-        If used, will do a ping test for connectivity before attempting operations on target machines.
-
+        Switch parameter - if used will conduct ping test for connectivity on target computers before performing operations.
+        Offline computers will be filtered out.
+        
     .EXAMPLE
         Send C:\test.txt file to target computers' C:\ drive (C:\test.txt)
         send-files -ComputerName test-client -sourcepath C:\test.txt -destinationpath C:\ -SendPings
