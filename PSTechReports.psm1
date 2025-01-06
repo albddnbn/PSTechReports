@@ -1748,10 +1748,14 @@ function Copy-RemoteFiles {
         If used, will do a ping test for connectivity before attempting operations on target machines.
 
     .EXAMPLE
-        Copy-RemoteFiles -TargetPath "Users\Public\Desktop" -OutputPath "C:\Users\Public\Desktop" -TargetComputer "t-client-"
-    
-    .EXAMPLE
+        Copy the C:\test.txt file from target computers to C:\testgrab2 folder on local computer.
+        Each remote computer will have it's own local subfolder in C:\testgrab2.
         Copy-RemoteFiles -ComputerName test-client -TargetPath C:\test.txt -OutputFolder C:\testgrab2 -SendPings
+
+    .EXAMPLE
+        Copy the C:\test folder from target computers to C:\testgrab2 folder on local computer.
+        Each remote computer will have it's own local subfolder in C:\testgrab2.
+        Copy-RemoteFiles -ComputerName test-client -TargetPath C:\test -OutputFolder C:\testgrab2 -SendPings
 
     #>
     param(        
@@ -1834,7 +1838,12 @@ function Send-Files {
         If used, will do a ping test for connectivity before attempting operations on target machines.
 
     .EXAMPLE
+        Send C:\test.txt file to target computers' C:\ drive (C:\test.txt)
         send-files -ComputerName test-client -sourcepath C:\test.txt -destinationpath C:\ -SendPings
+
+    .EXAMPLE
+        Send C:\test folder to target computers' C:\received folder (C:\received\test)
+        send-files -ComputerName test-client -sourcepath C:\test -destinationpath C:\received -SendPings
     #>
     param (
         [Parameter(
