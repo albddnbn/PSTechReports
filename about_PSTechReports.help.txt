@@ -1,0 +1,28 @@
+TOPIC
+    about_PSTechReports
+
+SHORT DESCRIPTION
+    A collection of functions to generate reports on basic computer details, files, and software.
+
+LONG DESCRIPTION
+    The PSTechReports module contains functions to generate reports on basic computer details, files, and software.
+    Some of the most useful functions included are:
+    - Get-ComputerDetails
+    - Scan-SoftwareInventory
+    - Scan-forApporFilepath
+
+EXAMPLES
+    Get basic computer details from Computer1 and output to gridview.
+    Get-ComputerDetails -ComputerName "Computer1"
+
+    Create software inventories for all computers in the 'test-client-' domain and output to 'computersoftware-<COMPUTER NAME>.csv/.xlsx' files.
+    Scan-SoftwareInventory -ComputerName "test-client-" -OutputFile "computersoftware" -SendPings
+
+    Scan specified computers for presence of C:\users\public\test.txt file and output findings to 'testfile.csv/.xlsx' files.
+    Scan-ForAppOrFilePath ComputerName 't-client-' -Item 'C:\users\public\test.txt' -outputfile 'testfile' -Path
+
+KEYWORDS
+    PSTechReports, reports, Active Directory, computer details, software inventory
+
+SEE ALSO
+    https://github.com/albddnbn/PSTechReports/wiki
