@@ -228,7 +228,7 @@ function Get-AssetInformation {
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     ## If there were any results - output them to terminal and/or report files as necessary.
-    if ($results) {
+    if ($results.count -ge 1) {
         $results = $results | Sort-Object -property pscomputername
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title $gridview_title
@@ -236,8 +236,9 @@ function Get-AssetInformation {
         else {
             $outputfile = $outputfile | Select-Object -first 1
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
-            "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            if ($errored_machines) {
+            if ($errored_machines.count -ge 1) {
+                "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
+
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             }
 
@@ -340,7 +341,8 @@ function Get-ComputerDetails {
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
-    if ($results) {
+
+    if ($results.count -ge 1) {
         $results = $results | Sort-Object -property pscomputername
         if (($outputfile.tolower() -eq 'n') -or (-not $outputfile)) {
             $results | out-gridview -Title $gridview_title
@@ -348,9 +350,10 @@ function Get-ComputerDetails {
         else {
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
 
-            "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            if ($errored_machines) {
+            if ($errored_machines.count -ge 1) {
+                "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
+                Invoke-Item "$outputfile-Errors.csv"
             }
             ## Try ImportExcel
             if (Get-Module -ListAvailable -Name ImportExcel) {
@@ -425,7 +428,6 @@ function Get-ConnectedPrinters {
 
     $gridview_title = "Printers"
 
-    ## Scriptblock - lists connected/default printers
     $list_local_printers_block = {
         $obj = [PScustomObject]@{
             Username          = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
@@ -433,7 +435,7 @@ function Get-ConnectedPrinters {
             ConnectedPrinters = $null
         }
 
-        # Only need to check for connected printers if a user is logged in.
+        # Script will only check for printers if a user is logged in.
         if ($obj.Username) {
             # get connected printers:
             get-ciminstance -class win32_printer | Select-Object name, Default | ForEach-Object {
@@ -452,15 +454,16 @@ function Get-ConnectedPrinters {
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
-    if ($results) {
+    if ($results.count -ge 1) {
         $results = $results | Sort-Object -property pscomputername
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -Title $gridview_title
         }
         else {
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
-            "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            if ($errored_machines) {
+            if ($errored_machines.count -ge 1) {
+                "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
+
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             }
 
@@ -524,11 +527,6 @@ function Get-CurrentUser {
     .EXAMPLE
         2. Get user on a single target computer:
         Get-CurrentUser -ComputerName "t-client-28"
-
-    .NOTES
-        ---
-        Author: albddnbn (Alex B.)
-        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param (
         [Parameter(
@@ -562,7 +560,7 @@ function Get-CurrentUser {
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
-    if ($results) {
+    if ($results.count -ge 1) {
 
         $results = $results | Sort-Object -property pscomputername
 
@@ -572,8 +570,9 @@ function Get-CurrentUser {
         else {
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
-            "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            if ($errored_machines) {
+            if ($errored_machines.count -ge 1) {
+                "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
+
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             }
 
@@ -739,7 +738,7 @@ function Get-InstalledDotNetversions {
 
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
-    if ($results) {
+    if ($results.count -ge 1) {
 
         # ForEach ($single_result in $results) {
         #     $single_result
@@ -754,8 +753,9 @@ function Get-InstalledDotNetversions {
         else {
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
-            "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
-            if ($errored_machines) {
+            if ($errored_machines.count -ge 1) {
+                "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
+
                 $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
             }
 
@@ -971,7 +971,7 @@ function Get-InventoryDetails {
 
     ## This section will attempt to output a CSV and XLSX report if anything other than 'n' was used for $Outputfile.
     ## If $Outputfile = 'n', results will be displayed in a gridview, with title set to $gridview_title.
-    if ($results) {
+    if ($results.count -ge 1) {
 
         $results = $results | Sort-Object -property pscomputername
 
@@ -1032,11 +1032,6 @@ function Ping-TestReport {
 
     .EXAMPLE
         Ping-TestReport -ComputerName "g-client-" -PingCount 2
-
-    .NOTES
-        ---
-        Author: albddnbn (Alex B.)
-        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
 
     param (
@@ -1100,7 +1095,7 @@ function Ping-TestReport {
         }
     }
 
-    if ($results) {
+    if ($results.count -ge 1) {
 
         $results = $results | Sort-Object -property pscomputername
 
@@ -1288,7 +1283,7 @@ function Scan-ForAppOrFilePath {
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
-    if ($results) {
+    if ($results.count -ge 1) {
         $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
         "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
         $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append
@@ -1437,10 +1432,10 @@ function Scan-SoftwareInventory {
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     ## Outputs results
-    if ($results) {
+    if ($results.count -ge 1) {
         $unique_hostnames = $($results.pscomputername) | Select-Object -Unique
 
-        if ($errored_machines) {
+        if ($errored_machines.count -ge 1) {
             Write-Host "These machines errored out during Invoke-Command." -ForegroundColor Red
             $errored_machines
         }
@@ -1688,7 +1683,7 @@ function Get-TempProfiles {
         }
     }
 
-    if ($results) {
+    if ($results.count -ge 1) {
         $results = $results | sort -property pscomputername
 
         if ($outputfile.tolower() -eq 'n') {
