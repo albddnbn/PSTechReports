@@ -74,6 +74,7 @@ function Get-CurrentUser {
             $results | out-gridview -title $gridview_title
         }
         else {
+            $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             if ($errored_machines.count -ge 1) {

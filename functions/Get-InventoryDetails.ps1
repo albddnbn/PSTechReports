@@ -95,12 +95,14 @@ function Get-InventoryDetails {
     ## If $Outputfile = 'n', results will be displayed in a gridview, with title set to $gridview_title.
     if ($results.count -ge 1) {
 
+
         $results = $results | Sort-Object -property pscomputername
 
         if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -title $gridview_title
         }
         else {
+            $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             ## Try ImportExcel

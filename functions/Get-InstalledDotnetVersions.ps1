@@ -150,6 +150,7 @@ function Get-InstalledDotNetversions {
             $results | out-gridview -Title "Installed .NET Versions"
         }
         else {
+            $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             if ($errored_machines.count -ge 1) {

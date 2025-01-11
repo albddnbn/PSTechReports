@@ -48,6 +48,7 @@ function Scan-ForAppOrFilePath {
         $ComputerName,
         [Parameter(Mandatory = $true)]
         [String]$Item,
+        [Parameter(Mandatory = $true)]
         [String]$Outputfile,
         [switch]$SendPings,
         [switch]$App,
@@ -163,6 +164,8 @@ function Scan-ForAppOrFilePath {
     $errored_machines = $RemoteError.CategoryInfo.TargetName
 
     if ($results.count -ge 1) {
+        $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
+
         $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
         "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"
         $errored_machines | Out-File -FilePath "$outputfile-Errors.csv" -Append

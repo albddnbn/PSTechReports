@@ -136,21 +136,27 @@ function Scan-SoftwareInventory {
             # get that computers apps
             $apps = $results | where-object { $_.pscomputername -eq $single_computer_name }
             # create the full filepaths
+
             $output_filepath = "$outputfile-$single_computer_name"
+
+            $output_filepath = Join-Path -Path $REPORT_DIRECTORY -ChildPath $output_filepath
+
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting files for $single_computername to $output_filepath."
 
-            $apps | Export-Csv -Path "$outputfile-$single_computer_name.csv" -NoTypeInformation
-            Import-CSV "$outputfile-$single_computer_name.csv" | Export-Excel -Path "$outputfile-$single_computer_name.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
+            $apps | Export-Csv -Path "$output_filepath.csv" -NoTypeInformation
 
+            if (Get-Module -ListAvailable -Name ImportExcel) {
+                Import-CSV "$output_filepath.csv" | Export-Excel -Path "$output_filepath.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
+            }
 
         }
         ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should exist
         try {
-            Invoke-item "$($outputfile | split-path -Parent)"
+            Invoke-item "$($output_filepath | split-path -Parent)"
         }
         catch {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder, attempting to open first .csv in list." -Foregroundcolor Yellow
-            Invoke-item "$outputfile-$($unique_hostnames | Select-Object -first 1).csv"
+            # Invoke-item "$outputfile-$($unique_hostnames | Select-Object -first 1).csv"
         }
     }
 

@@ -96,6 +96,7 @@ function Ping-TestReport {
             $results | out-gridview -Title $gridview_title
         }
         else {
+            $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             ## Try ImportExcel

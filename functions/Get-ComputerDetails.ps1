@@ -76,9 +76,6 @@ function Get-ComputerDetails {
 
     ## Tries to collect hostnames from any Invoke-Command error messages
     $errored_machines = $RemoteError.CategoryInfo.TargetName
-    $errored_machines
-
-    read-host "Press Enter to continue"
 
     if ($results.count -ge 1) {
         $results = $results | Sort-Object -property pscomputername
@@ -86,7 +83,9 @@ function Get-ComputerDetails {
             $results | out-gridview -Title $gridview_title
         }
         else {
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
+            
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
 
             if ($errored_machines.count -ge 1) {
                 "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"

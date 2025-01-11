@@ -68,7 +68,6 @@ function Get-TempProfiles {
                 # get all temp profiles on computer / count / create object
                 $temp_profile_folders = Get-Childitem -Path "\\$single_computer\c$\Users" -Filter "*.$TempFolderSuffix*" -Directory -ErrorAction SilentlyContinue
 
-                $temp_profile_folders
                 ## create object with  user, computer name, folder count to object, add to arraylist
                 ForEach ($single_folder in $temp_profile_folders) {
 
@@ -102,19 +101,20 @@ function Get-TempProfiles {
     if ($results.count -ge 1) {
         $results = $results | sort -property pscomputername
 
-        if ($outputfile.tolower() -eq 'n') {
+        if (($outputfile.tolower() -eq 'n') -or (-not $Outputfile)) {
             $results | out-gridview -title $gridview_title
         }
         else {
+            $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
 
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
             ## Try ImportExcel
-            try {
+            if (Get-Module -ListAvailable -Name ImportExcel) {
 
                 Import-Module ImportExcel
                 Import-CSV "$outputfile.csv" | Export-Excel -Path "$outputfile.xlsx" -AutoSize -TitleBackgroundColor Blue -TableStyle Medium9 -BoldTopRow
             }
-            catch {
+            else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
             ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist

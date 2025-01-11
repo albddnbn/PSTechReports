@@ -79,6 +79,8 @@ function Get-ConnectedPrinters {
             $results | out-gridview -Title $gridview_title
         }
         else {
+            $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
+
             $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation -Force
             if ($errored_machines.count -ge 1) {
                 "These machines errored out:`r" | Out-File -FilePath "$outputfile-Errors.csv"

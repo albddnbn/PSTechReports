@@ -61,6 +61,7 @@ Function Get-IntuneHardwareIDs {
         $outputfile += ".csv"
     }
 
+    $outputfile = Join-Path -Path $REPORT_DIRECTORY -ChildPath $outputfile
 
     ## Installs the script and then gets absolute path to execute it.
     $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
