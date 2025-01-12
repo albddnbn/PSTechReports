@@ -2,12 +2,10 @@
     Get-ChildItem -Path "$PSScriptRoot\$directory\*.ps1" | ForEach-Object { . $_.FullName }
 }
 
-$REPORT_DIRECTORY = ""
+do {
+    $REPORT_DIRECTORY = Read-Host "Enter path to reports directory: "
+} until (Test-Path $REPORT_DIRECTORY -PathType Container -ErrorAction SilentlyContinue)
 
-while (-not (Test-Path $REPORT_DIRECTORY -PathType Container -ErrorAction SilentlyContinue)) {
-    Write-Host "Directory does not exist. Please try again."
-    $REPORT_DIRECTORY = Read-Host "Set Reports Directory: "
-}
 
 $REPORT_DIRECTORY = (Get-Item -Path $REPORT_DIRECTORY).FullName
 
