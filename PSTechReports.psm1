@@ -3,7 +3,7 @@
 }
 
 do {
-    $REPORT_DIRECTORY = Read-Host "Enter path to reports directory: "
+    $REPORT_DIRECTORY = Read-Host "Enter path to reports directory"
 } until (Test-Path $REPORT_DIRECTORY -PathType Container -ErrorAction SilentlyContinue)
 
 
